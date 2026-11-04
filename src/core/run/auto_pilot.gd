@@ -95,10 +95,7 @@ static func spend_greedily(prog: Progression, profile: PlayerProfile, max_purcha
 		for option in options:
 			if int(option["cost"]) > profile.wallet.gold:
 				continue
-			var trial := PlayerProfile.from_dict(profile.to_dict())
-			trial.wallet.gold = 1 << 60
-			_apply(prog, trial, option["action"])
-			var gain := float(prog.power(trial) - base_power) / float(maxi(1, int(option["cost"])))
+			var gain := float(_power_after(prog, profile, option["action"]) - base_power) / float(maxi(1, int(option["cost"])))
 			if gain > best_value:
 				best_value = gain
 				best_action = option["action"]
@@ -124,6 +121,26 @@ static func spend_greedily(prog: Progression, profile: PlayerProfile, max_purcha
 	return purchases
 
 
+## Power if the action were taken, by applying it temporarily and undoing it.
+static func _power_after(prog: Progression, profile: PlayerProfile, action: String) -> int:
+	var result := 0
+	if action == "level":
+		profile.hero_level += 1
+		result = prog.power(profile)
+		profile.hero_level -= 1
+	elif action.begins_with("train:"):
+		var id := action.substr(6)
+		profile.training[id] = int(profile.training.get(id, 0)) + 1
+		result = prog.power(profile)
+		profile.training[id] = int(profile.training[id]) - 1
+	elif action.begins_with("enhance:"):
+		var g := profile.gear_by_uid(int(action.substr(8)))
+		g["enhance"] = int(g["enhance"]) + 1
+		result = prog.power(profile)
+		g["enhance"] = int(g["enhance"]) - 1
+	return result
+
+
 static func _apply(prog: Progression, profile: PlayerProfile, action: String) -> String:
 	if action == "level":
 		return prog.level_up(profile)
@@ -143,14 +160,18 @@ static func _merge_and_equip(prog: Progression, profile: PlayerProfile) -> void:
 				if prog.merge(profile, item_id, rarity) == Progression.OK:
 					merged = true
 	for slot: String in prog.db.gear["slots"]:
-		var best_uid := -1
-		var best_power := -1
+		var best_uid := int(profile.equipped.get(slot, -1))
+		var best_power := prog.power(profile) if best_uid >= 0 else -1
 		for g in profile.gear:
 			if prog.db.gear_items[g["item"]]["slot"] != slot:
 				continue
-			var trial := PlayerProfile.from_dict(profile.to_dict())
-			trial.equipped[slot] = int(g["uid"])
-			var p := prog.power(trial)
+			var previous: Variant = profile.equipped.get(slot, null)
+			profile.equipped[slot] = int(g["uid"])
+			var p := prog.power(profile)
+			if previous == null:
+				profile.equipped.erase(slot)
+			else:
+				profile.equipped[slot] = previous
 			if p > best_power:
 				best_power = p
 				best_uid = int(g["uid"])

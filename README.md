@@ -6,7 +6,7 @@ A portrait mobile roguelite RPG for iOS and Android. A little kitsune delves int
 
 ## Status
 
-Pre-production. M0 (project setup) and M1 (combat simulation core, 77 tests) are done. Next: M2 (expedition and progression).
+Pre-production. M0 (setup), M1 (combat core) and M2 (expedition, progression, economy, saves) are done, with 140 tests. Next: M3 (playable UI slice).
 
 ## Tech
 

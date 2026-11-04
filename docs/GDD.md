@@ -90,14 +90,14 @@ Enemy stats scale ×1.40 per chapter and +6% per room.
 
 ## 9. Progression (milestone M2; formulas in `docs/ECONOMY.md`)
 
-- **Hero level** (gold), capped by progress: max level = 10 + 4 × highest chapter cleared.
+- **Hero level** (gold), capped by progress: max level = 10 + 6 × highest chapter cleared.
 - **Training** (gold): Might (+ATK%), Vitality (+HP%), Finesse (crit).
 - **Gear** (3 slots: weapon, charm, robe), 3 rarities in the MVP. Enhance with gold; merge 3 identical items into the next rarity.
 - **Relic attunement** (shards): permanent potency per relic.
 - **Codex**: relics and Resonances discovered.
 - **Recommended Power** shown for each chapter, so players know when to farm.
 
-Balance probe today (fresh hero, no upgrades, simplified runs): chapter 1 is cleared 91% of the time, chapter 2 27%. Chapter 3 needs about 1.5–1.7× base power. Target: chapters 1–3 generous, the first soft wall around chapters 18–25.
+Pacing (economy simulation on the real code, see `docs/ECONOMY.md`): chapters 1–10 fly by on day 1–3, chapter 20 around days 5–10, and the 30 launch chapters take free players about a month. After that progress keeps going, but more slowly.
 
 ## 10. Screens (MVP)
 

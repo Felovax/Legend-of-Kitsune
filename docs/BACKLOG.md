@@ -1,27 +1,32 @@
 # Backlog
 
-## M2: run and progression (next)
-- [ ] `src/core/run/expedition.gd`: 10-room state machine, door generation from chapter data, encounter tables, HP carryover, 15% heal between rooms
-- [ ] Relic draft: offer 3, duplicates level up, one free reroll, Resonance hint on cards
-- [ ] Echo Keepsake after a defeat
-- [ ] In-run tails: +1 tail per active Resonance (+5% ATK each, first pass)
-- [ ] Rewards: gold, shards, first-clear bonus, gear drops
-- [ ] `data/chapters.json`, `data/gear.json`, `data/progression.json` (cost curves)
-- [ ] Progression: hero level (capped by progress), training ×3, gear (3 slots, 3 rarities, enhance, merge), relic attunement
-- [ ] Wallet + ledger with reason codes; insufficient-funds handling
-- [ ] Save: JSON, schema version, migrations, atomic write, 2 backups, checksum
-- [ ] Offline rewards with cap and clock-rollback guard
-- [ ] Rewrite the economy simulation in Godot using the real code; 5 player archetypes
-- [ ] Tests: softlock check, save round-trip, migrations, double-grant guard
+## M3: playable slice (next)
+- [ ] `GameState` service: load/save the profile (SaveService), seed_base on first launch, offline claim on resume, autosave after each run and purchase
+- [ ] Theme: colours, fonts and button/panel styles in the bright chibi direction (Godot Theme resource); safe-area margins
+- [ ] Camp screen: chapter card with Recommended vs your Power, Delve button, offline chest, currency bar, bottom tabs
+- [ ] Expedition screen: room track, door choice, battle stage, draft overlay (cards with "completes Resonance" hint), event dialog, Results with Echo choice
+- [ ] Battle replay view: plays `BattleResult.events` (attacks, damage numbers, crits, statuses, procs, Resonance banner); 1×/2× speed and skip
+- [ ] Hero screen: level, three trainings, gear (equip, enhance, merge), attunement
+- [ ] Codex screen: relics and Resonances (silhouettes until discovered)
+- [ ] Settings: audio, reduced effects, screen shake, text size
+- [ ] Placeholder art: consistent shapes and colours; swap in AI art when ready (`docs/ART_PROMPTS.md`)
+- [ ] Basic audio plus the Resonance "chord"
+- [ ] Localization: `localization/strings.csv`, all UI text through `tr()`
+- [ ] Android debug export from CI or locally; check it runs on a phone
 
-## Later
-- [ ] Battle replay view (M3)
+## M4
+- [ ] Simulated shop (catalog JSON, eligibility, fake store adapter, idempotent grants)
+- [ ] **Gold Cache limits:** the economy sim shows a $150/month player reaching chapter 30 about 4× faster than an active free player. Test a daily cap or escalating price, then re-run `tools/economy_sim.gd`.
 - [ ] Debug panel (debug builds only)
 - [ ] Analytics event schema + local sink
-- [ ] Localization CSV wiring (English first)
+- [ ] Onboarding (first Resonance guaranteed in chapter 1)
+
+## Later
 - [ ] Rift Seed weekly challenge (v1.1)
 - [ ] Permanent Tail Awakening (v1.0)
+- [ ] 30 chapters / 3 biomes, ~20 relics, ~8 Resonances (M5)
 
 ## Known issues / notes
-- Balance: chapter 2 is cleared only ~27% of the time by a fresh hero. Intended to be fixed by M2 rewards and upgrades; re-measure then.
-- Enemy formations are currently random in the balance probe; real encounter tables arrive with chapters.json.
+- The MVP data has 5 chapters. Simulations beyond chapter 5 reuse chapter 5's enemies (stats still scale).
+- `tools/balance_sim.gd` is a raw combat probe with a simplified room loop. Use `tools/economy_sim.gd` for pacing.
+- Expected pacing (first pass) is in `docs/ECONOMY.md`. It must be re-checked with real playtests (M5).

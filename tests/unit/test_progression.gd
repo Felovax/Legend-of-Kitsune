@@ -17,7 +17,7 @@ func _rich_profile() -> PlayerProfile:
 
 func test_level_cost_curve() -> void:
 	assert_eq(prog.level_cost(1), 60)
-	assert_eq(prog.level_cost(2), 67)
+	assert_eq(prog.level_cost(2), Fx.bp(60, int(db.progression["hero"]["level_cost"]["growth_bp"])))
 	assert_gt(prog.level_cost(30), prog.level_cost(29))
 
 
@@ -39,7 +39,7 @@ func test_level_is_capped_by_progress() -> void:
 	assert_eq(p.hero_level, 10, "max level 10 before clearing any chapter")
 	assert_eq(prog.level_up(p), Progression.ERR_MAX)
 	p.best_chapter = 2
-	assert_eq(prog.max_level(p), 18)
+	assert_eq(prog.max_level(p), 10 + 2 * int(db.progression["hero"]["max_level_per_chapter"]))
 
 
 func test_level_up_without_gold_fails_cleanly() -> void:
@@ -134,11 +134,20 @@ func test_power_grows_and_recommended_power_matches_base_hero() -> void:
 
 
 func test_room_gold_kinds_and_replay() -> void:
-	assert_eq(prog.room_gold(1, "fight", false), 6)
-	assert_eq(prog.room_gold(1, "elite", false), 15)
-	assert_eq(prog.room_gold(1, "boss", false), 72)
-	assert_eq(prog.room_gold(1, "boss", true), 43)
+	var r: Dictionary = db.progression["rewards"]
+	var base := int(r["gold_per_room"])
+	assert_eq(prog.room_gold(1, "fight", false), base)
+	assert_eq(prog.room_gold(1, "elite", false), Fx.bp(base * 100, int(r["elite_gold_bp"])) / 100)
+	assert_eq(prog.room_gold(1, "boss", false), Fx.bp(base * 100, int(r["boss_gold_bp"])) / 100)
+	assert_lt(prog.room_gold(1, "boss", true), prog.room_gold(1, "boss", false), "replays pay less")
 	assert_gt(prog.room_gold(5, "fight", false), prog.room_gold(4, "fight", false))
+
+
+func test_fx_bp_does_not_overflow_on_huge_values() -> void:
+	var huge := 900_000_000_000_000_000
+	assert_eq(Fx.bp(huge, 5000), 450_000_000_000_000_000)
+	assert_eq(Fx.compound_bp(50000, 100), Fx.MAX_VALUE, "exponential curves saturate")
+	assert_eq(Fx.bp(-15000, 5000), -7500)
 
 
 func test_offline_reward_and_cap() -> void:

@@ -8,11 +8,14 @@ data/                  game content as JSON (balance, heroes, enemies, relics, r
 src/core/              pure logic: no Nodes, no wall-clock time, no global randomness
   sim/                 Rng32, Fx (integer math), SimConfig, Combatant, BattleSim, BattleResult, CombatFactory
   content/             ContentDB (load + index), ContentValidator, ContentSchema (allowed vocabulary)
-  run/        (M2)     expedition state machine: rooms, doors, drafts, rewards, Echo keepsake
-  progression/ (M2)    hero level, training, gear, attunement, codex
-  economy/    (M2)     wallet, ledger (every currency change has a reason), offline rewards
+  run/                 Expedition (state machine: doors, fights, drafts, events, tails, Echo, loot),
+                       RunResult, AutoPilot (bot for sims, softlock tests and auto-repeat)
+  progression/         PlayerProfile (all persistent state), Wallet (+ ledger with reason codes),
+                       Progression (levels, training, attunement, gear, power, rewards, offline income)
+  save/                SaveCodec (schema version + migration chain)
   shop/       (M4)     catalog, eligibility, purchase flow, idempotent grants
-src/services/ (M2+)    thin autoloads: GameState, SaveService, StoreService, Analytics, Audio
+src/services/          SaveService (atomic write, 2 backups, checksum); later GameState, StoreService,
+                       Analytics, Audio
 src/platform/ (M4/M6)  store adapters: fake, Apple (godot-iap), Google (Play Billing)
 src/ui/                screens and views; the battle view replays BattleResult.events
 tests/                 headless tests (run_tests.gd, test_case.gd, sim_test_case.gd, unit/, fixtures/)
@@ -47,10 +50,24 @@ Adding a relic means adding JSON only. A new trigger, action, status or stat mea
 ### 4. Content validation
 `ContentDB.load_from_dir()` normalizes JSON numbers (integral floats → int), validates everything and refuses to build lookup tables if anything is wrong. CI runs `tools/validate_content.gd`.
 
-## Planned systems
+### 5. Expedition and progression (M2)
+- `Expedition.start(content, profile, chapter)` consumes a run number from the profile; the run seed is `derive_seed(profile.seed_base, run_number)`, with separate streams for doors, encounters, drafts, events, loot and each battle.
+- The UI drives it by phase (DOOR → BATTLE → DRAFT/EVENT → …). `fight()` returns the BattleResult to animate.
+- Rewards are collected in a `RunResult` and applied once with `Progression.apply_run_result()`, which refuses a run id it has already seen.
+- Every currency change goes through `Wallet.add/spend(currency, amount, reason)`. Gems have free and paid buckets; free gems are spent first.
+- Offline income is gold only, capped, and grants nothing if the clock moved backwards.
 
-### Save system (M2)
-JSON in `user://`, with a `schema` version and a chain of migration functions (one per version step, each tested). Writes are atomic (write a temp file, then rename), the last 2 saves are kept as backups, and an HMAC checksum deters casual editing (it is not security).
+### 6. Saves (M2)
+`SaveService` writes `user://saves/profile.json`: the profile is encoded by `SaveCodec` with `schema` and `game` fields, then wrapped as `{payload, sig}` (HMAC-SHA256 checksum, not security).
+- Writes go to a temp file first, then rotate `.bak1`/`.bak2`, then rename.
+- Loading tries main → backup1 → backup2 → temp, so a corrupt or interrupted save falls back to the newest valid copy.
+- A newer schema is refused. Older schemas run through `SaveCodec.steps()` (one tested step per version).
+
+### 7. Simulation tools
+- `tools/economy_sim.gd`: day-by-day player archetypes (casual/active free, three spender levels) using the real code: offline claims, gem caches, greedy upgrades and AutoPilot expeditions within a time budget. This is the tool for pacing decisions.
+- `tools/balance_sim.gd`: raw combat power probe (simplified rooms, power multiplier).
+
+## Planned systems
 
 ### Purchases (M4 simulated, M6 real)
 `StoreAdapter` (fake / Apple / Google) → verification (fake locally; server in production) → `GrantService`, which refuses to grant the same transaction ID twice → wallet, inventory and entitlements. Paid gems, free gems, entitlements, cosmetics and progression are separate.

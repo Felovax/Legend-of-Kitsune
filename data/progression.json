@@ -1,19 +1,53 @@
 {
   "hero": {
     "level_stat_growth_bp": 10600,
-    "level_cost": { "base": 60, "growth_bp": 11300 },
+    "level_cost": {
+      "base": 60,
+      "growth_bp": 10900
+    },
     "max_level_base": 10,
-    "max_level_per_chapter": 4
+    "max_level_per_chapter": 6
   },
   "training": [
-    { "id": "might", "name_key": "TRAINING_MIGHT", "atk_pct_bp": 300, "max_rank": 300, "cost": { "base": 90, "growth_bp": 11800 } },
-    { "id": "vitality", "name_key": "TRAINING_VITALITY", "hp_pct_bp": 300, "max_rank": 300, "cost": { "base": 90, "growth_bp": 11800 } },
-    { "id": "finesse", "name_key": "TRAINING_FINESSE", "crit_bp": 40, "crit_dmg_bp": 150, "max_rank": 100, "cost": { "base": 120, "growth_bp": 12000 } }
+    {
+      "id": "might",
+      "name_key": "TRAINING_MIGHT",
+      "atk_pct_bp": 300,
+      "max_rank": 300,
+      "cost": {
+        "base": 90,
+        "growth_bp": 11800
+      }
+    },
+    {
+      "id": "vitality",
+      "name_key": "TRAINING_VITALITY",
+      "hp_pct_bp": 300,
+      "max_rank": 300,
+      "cost": {
+        "base": 90,
+        "growth_bp": 11800
+      }
+    },
+    {
+      "id": "finesse",
+      "name_key": "TRAINING_FINESSE",
+      "crit_bp": 40,
+      "crit_dmg_bp": 150,
+      "max_rank": 100,
+      "cost": {
+        "base": 120,
+        "growth_bp": 12000
+      }
+    }
   ],
   "attunement": {
     "potency_per_level_bp": 800,
     "max_level": 30,
-    "cost": { "base": 8, "growth_bp": 14500 }
+    "cost": {
+      "base": 8,
+      "growth_bp": 14500
+    }
   },
   "run": {
     "rooms": 10,
@@ -24,13 +58,24 @@
     "free_rerolls": 1,
     "tail_atk_bp": 500,
     "max_tails": 9,
-    "door_weights": { "fight": 50, "elite": 10, "shrine": 15, "treasure": 10, "event": 15 },
-    "relic_rarity_weights": { "common": 60, "rare": 30, "epic": 8, "legendary": 2 },
+    "door_weights": {
+      "fight": 50,
+      "elite": 10,
+      "shrine": 15,
+      "treasure": 10,
+      "event": 15
+    },
+    "relic_rarity_weights": {
+      "common": 60,
+      "rare": 30,
+      "epic": 8,
+      "legendary": 2
+    },
     "minutes_per_full_run_x10": 25
   },
   "rewards": {
-    "gold_per_room": 6,
-    "gold_growth_bp": 13400,
+    "gold_per_room": 3,
+    "gold_growth_bp": 13600,
     "elite_gold_bp": 25000,
     "boss_gold_bp": 120000,
     "replay_gold_bp": 6000,

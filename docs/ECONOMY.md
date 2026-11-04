@@ -12,30 +12,42 @@ All numbers are hypotheses to be tested. Formulas live in data and are tuned wit
 
 Rules: never add a currency to make prices confusing (FTC v. HoYoverse 2025; EU CPC principles). Gem-priced items show an approximate real-money value ("≈ $X") computed from the store's localized gem-pack price.
 
-## First-pass formulas (planning model)
+## Formulas (tuned with `tools/economy_sim.gd`; live in `data/progression.json` and `data/gear.json`)
 
 | System | Formula |
 |---|---|
 | Enemy stats | base × 1.40^(chapter−1) × (1 + 0.06 × (room−1)); elite and boss defined in data |
-| Hero level | stats × 1.06^(L−1); cost 60 × 1.13^(L−1) gold; max level 10 + 4 × best chapter |
-| Training | +3% per rank (Might ATK, Vitality HP), Finesse +0.4% crit chance / +1.5% crit damage; cost 90 × 1.18^rank |
-| Gear | +6% of base stat per enhancement level; cost 40 × 1.14^level; merge 3 → next rarity |
-| Relic attunement | +8% potency per level; cost 8 × 1.45^(level−1) shards |
-| Gold per room | 6 × 1.34^(chapter−1) (elite ×2.5, boss ×12); replays pay 60%; first clear +3× boss gold |
+| Hero level | stats × 1.06^(L−1); cost 60 × 1.09^(L−1) gold; **max level 10 + 6 × best chapter** |
+| Training | +3% per rank (Might ATK, Vitality HP), Finesse +0.4% crit chance / +1.5% crit damage; cost 90 × 1.18^rank (Finesse 120 × 1.20^rank) |
+| Gear | rarity multiplier (common 1×, rare 1.8×, epic 3.2×); +6% per enhancement level (cap 10/20/30); cost 40 × 1.14^level; merge 3 → next rarity |
+| Relic attunement | +8% potency per level (max 30); cost 8 × 1.45^level shards |
+| Gold per room | 3 × 1.36^(chapter−1) (elite ×2.5, boss ×12); replays pay 60%; first clear +3× boss gold |
+| Shards | 2 per room won (+10% per chapter), +15 for beating the boss |
 | Offline | 3% of active farming rate per minute, 12 h cap; never gems |
 | Gold Cache | 100 gems = 60 minutes of farming gold at your best chapter (scales with progress, no inflation) |
+| Shard Cache | 100 gems = 60 minutes of winning runs' shards at your best chapter |
 
-### Planning simulation (Python model, to be redone in Godot in M2)
+Why these numbers: a cap of 4 levels per chapter gave free players a hard wall around chapter 21 that extra play could not move. A cap of 7 (1.06⁷ ≈ 1.50× per chapter, more than the enemies' 1.40×) ran away. With 6, levels stay cost-limited, and income versus cost per chapter gives a gentle, growing grind.
 
-| Archetype (play/day, spend) | Ch 10 | Ch 20 | Ch 30 | Chapter at day 30 |
-|---|---|---|---|---|
-| Casual free (15 min, $0) | day 4 | day 25 | >150 | 21 |
-| Active free (50 min, $0) | day 3 | day 15 | day 98 | 24 |
-| Occasional spender (20 min, $5 starter + $5/mo) | day 3 | day 20 | day 134 | 22 |
-| Regular spender (45 min, $30/mo) | day 2 | day 12 | day 78 | 25 |
-| High spender (75 min, $150/mo) | day 2 | day 7 | day 38 | 28 |
+### Simulated pacing (Godot, real game code)
 
-Spending speeds progress up about 2–2.5× at the high end. It does not trivialize the game, and free players reach every PvE chapter.
+`tools/economy_sim.gd -- --days=90 --seeds=2` (median of 2 seeds). Day on which the chapter was first cleared:
+
+| Archetype (play/day, spend) | Ch 3 | Ch 5 | Ch 10 | Ch 15 | Ch 20 | Ch 25 | Ch 30 | Chapter on day 7 / 30 / 90 |
+|---|---|---|---|---|---|---|---|---|
+| Casual free (15 min, $0) | 1 | 1 | 3 | 5 | 10 | 17 | 30 | 18 / 30 / 38 |
+| Active free (50 min, $0) | 1 | 1 | 2 | 3 | 5 | 10 | 24 | 24 / 34 / 40 |
+| Occasional spender (20 min, $5 starter + $5/mo) | 1 | 1 | 2 | 4 | 8 | 13 | 23 | 19 / 32 / 40 |
+| Regular spender (45 min, $30/mo) | 1 | 1 | 1 | 2 | 4 | 6 | 12 | 27 / 37 / 45 |
+| High spender (75 min, $150/mo) | 1 | 1 | 1 | 2 | 3 | 4 | 6 | 32 / 43 / 50 |
+
+What this means:
+- **Onboarding is generous** (chapter 10 within 1–3 days).
+- **Free players finish the 30 launch chapters in about a month**, then keep progressing more slowly. That fits a content update every 4–6 weeks.
+- **Spending accelerates** progress: a regular spender is about 2× faster to chapter 30.
+- **Open issue:** the $150/month player is about 4× faster and 10 chapters ahead at day 90 (they also play 50% longer). Gold Caches are the lever; a daily cap or escalating price will be tested in M4.
+
+Read with care: these are bots with fixed habits, not people, and only 5 chapters have unique content today (simulations reuse chapter 5's enemies above that).
 
 ## In-app purchase catalog (hypotheses)
 

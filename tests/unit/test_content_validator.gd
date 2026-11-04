@@ -3,10 +3,65 @@ extends TestCase
 
 func _data() -> Dictionary:
 	var data := {}
-	for name in ContentDB.FILES:
+	for name in ContentDB.FILES + ContentDB.META_FILES:
 		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/%s.json" % name))
-		data[name] = parsed if name == "balance" else parsed[name]
+		data[name] = parsed if ContentDB.WHOLE_FILES.has(name) else parsed[name]
 	return data
+
+
+func test_shipped_content_includes_meta_files() -> void:
+	assert_true(ContentDB.load_from_dir().has_meta_content())
+
+
+func test_unknown_door_kind_is_rejected() -> void:
+	var data := _data()
+	data["progression"]["run"]["door_weights"]["casino"] = 5
+	assert_has(_errors_for(data), "unknown door 'casino'")
+
+
+func test_elite_room_must_come_before_boss() -> void:
+	var data := _data()
+	data["progression"]["run"]["elite_room"] = 10
+	assert_has(_errors_for(data), "elite_room: must be before the boss room")
+
+
+func test_chapter_boss_must_be_a_boss() -> void:
+	var data := _data()
+	data["chapters"]["chapters"][0]["boss"] = "moss_slime"
+	assert_has(_errors_for(data), "is not a boss enemy")
+
+
+func test_chapters_must_be_numbered_in_order() -> void:
+	var data := _data()
+	data["chapters"]["chapters"][1]["number"] = 7
+	assert_has(_errors_for(data), "numbered 1, 2, 3")
+
+
+func test_group_sizes_need_one_entry_per_room() -> void:
+	var data := _data()
+	(data["chapters"]["group_sizes"] as Array).pop_back()
+	assert_has(_errors_for(data), "one entry per room")
+
+
+func test_gear_item_slot_and_stats_are_checked() -> void:
+	var data := _data()
+	data["gear"]["items"][0]["slot"] = "hat"
+	data["gear"]["items"][1]["stats"] = {"luck": 5}
+	var errors := _errors_for(data)
+	assert_has(errors, "unknown slot 'hat'")
+	assert_has(errors, "unknown stat 'luck'")
+
+
+func test_event_outcome_is_checked() -> void:
+	var data := _data()
+	data["events"][0]["options"][0]["outcomes"][0]["type"] = "free_money"
+	assert_has(_errors_for(data), "unknown outcome 'free_money'")
+
+
+func test_training_must_grant_a_stat() -> void:
+	var data := _data()
+	(data["progression"]["training"][0] as Dictionary).erase("atk_pct_bp")
+	assert_has(_errors_for(data), "grants no stat")
 
 
 func _errors_for(data: Dictionary) -> String:

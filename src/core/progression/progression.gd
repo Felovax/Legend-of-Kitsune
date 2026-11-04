@@ -296,6 +296,14 @@ func gold_cache_amount(profile: PlayerProfile) -> int:
 	return farm_gold_per_minute(profile) * 60
 
 
+## Shards bought by a Shard Cache: one hour of winning runs at the best chapter.
+func shard_cache_amount(profile: PlayerProfile) -> int:
+	var ch := maxi(1, profile.best_chapter)
+	var per_run := shards_per_room(ch) * int(cfg["run"]["rooms"]) + int(cfg["rewards"]["shards_win_bonus"])
+	@warning_ignore("integer_division")
+	return per_run * 600 / int(cfg["run"]["minutes_per_full_run_x10"])
+
+
 ## Applies an expedition's rewards exactly once.
 func apply_run_result(profile: PlayerProfile, result: RunResult) -> String:
 	if result.run_id.is_empty() or profile.applied_runs.has(result.run_id):

@@ -1,0 +1,34 @@
+{
+  "resonances": [
+    {
+      "id": "thermal_shock",
+      "name_key": "RESONANCE_THERMAL_SHOCK",
+      "requires_tags": ["ember", "frost"],
+      "effects": [
+        {
+          "trigger": "on_status_applied",
+          "status": "freeze",
+          "target_has_status": "burn",
+          "action": { "type": "consume_burst", "target": "target", "status": "burn", "mult_bp": 15000, "kind": "shatter" }
+        }
+      ]
+    },
+    {
+      "id": "arc_storm",
+      "name_key": "RESONANCE_ARC_STORM",
+      "requires_tags": ["storm", "chain"],
+      "effects": [
+        { "trigger": "every_n_attacks", "n": 4, "action": { "type": "damage", "target": "other_enemies", "max_targets": 2, "mult_bp": 8000, "kind": "arc", "chainable": false } },
+        { "trigger": "every_n_attacks", "n": 4, "action": { "type": "apply_status", "target": "all_enemies", "status": "shock", "stacks": 1, "chainable": false } }
+      ]
+    },
+    {
+      "id": "crimson_edge",
+      "name_key": "RESONANCE_CRIMSON_EDGE",
+      "requires_tags": ["edge", "life"],
+      "effects": [
+        { "trigger": "on_crit", "action": { "type": "heal", "target": "self", "pct_max_hp_bp": 300, "overheal_shield_cap_bp": 2000 } }
+      ]
+    }
+  ]
+}

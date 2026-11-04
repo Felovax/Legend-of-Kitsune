@@ -1,0 +1,9 @@
+{
+  "heroes": [
+    {
+      "id": "kitsune",
+      "name_key": "HERO_KITSUNE",
+      "stats": { "hp": 300, "atk": 25, "aps_milli": 1000, "crit_bp": 500, "crit_dmg_bp": 15000, "armor_bp": 0 }
+    }
+  ]
+}

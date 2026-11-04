@@ -1,0 +1,78 @@
+{
+  "relics": [
+    {
+      "id": "ember_stone",
+      "name_key": "RELIC_EMBER_STONE",
+      "tags": ["ember"],
+      "rarity": "common",
+      "effects": [
+        { "trigger": "on_hit", "action": { "type": "apply_status", "target": "target", "status": "burn", "stacks": 1 } }
+      ]
+    },
+    {
+      "id": "frozen_core",
+      "name_key": "RELIC_FROZEN_CORE",
+      "tags": ["frost"],
+      "rarity": "common",
+      "effects": [
+        { "trigger": "on_hit", "action": { "type": "apply_status", "target": "target", "status": "chill", "stacks": 1 } }
+      ]
+    },
+    {
+      "id": "storm_crystal",
+      "name_key": "RELIC_STORM_CRYSTAL",
+      "tags": ["storm"],
+      "rarity": "common",
+      "effects": [
+        { "trigger": "every_n_attacks", "n": 4, "action": { "type": "damage", "target": "target", "mult_bp": 12000, "kind": "bolt" } }
+      ]
+    },
+    {
+      "id": "chain_relic",
+      "name_key": "RELIC_CHAIN",
+      "tags": ["chain"],
+      "rarity": "rare",
+      "effects": [
+        { "trigger": "passive", "action": { "type": "modify_stat", "target": "self", "stat": "chain_targets", "add": 1, "scales": false } },
+        { "trigger": "passive", "action": { "type": "modify_stat", "target": "self", "stat": "chain_ratio_bp", "add": 5000 } }
+      ]
+    },
+    {
+      "id": "whetstone",
+      "name_key": "RELIC_WHETSTONE",
+      "tags": ["edge"],
+      "rarity": "common",
+      "effects": [
+        { "trigger": "passive", "action": { "type": "modify_stat", "target": "self", "stat": "crit_bp", "add": 1500 } },
+        { "trigger": "passive", "action": { "type": "modify_stat", "target": "self", "stat": "crit_dmg_bp", "add": 3000 } }
+      ]
+    },
+    {
+      "id": "blood_chalice",
+      "name_key": "RELIC_BLOOD_CHALICE",
+      "tags": ["life"],
+      "rarity": "common",
+      "effects": [
+        { "trigger": "passive", "action": { "type": "modify_stat", "target": "self", "stat": "lifesteal_bp", "add": 400 } }
+      ]
+    },
+    {
+      "id": "ward_stone",
+      "name_key": "RELIC_WARD_STONE",
+      "tags": ["ward"],
+      "rarity": "common",
+      "effects": [
+        { "trigger": "fight_start", "action": { "type": "shield", "target": "self", "pct_max_hp_bp": 2500 } }
+      ]
+    },
+    {
+      "id": "hourglass",
+      "name_key": "RELIC_HOURGLASS",
+      "tags": ["tempo"],
+      "rarity": "common",
+      "effects": [
+        { "trigger": "passive", "action": { "type": "modify_stat", "target": "self", "stat": "aps_bonus_bp", "add": 2000 } }
+      ]
+    }
+  ]
+}

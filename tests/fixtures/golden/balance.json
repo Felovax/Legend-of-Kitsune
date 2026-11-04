@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "sim": {
+    "ticks_per_second": 20,
+    "max_battle_seconds": 60,
+    "start_gauge_bp": 5000,
+    "armor_cap_bp": 6000,
+    "crit_cap_bp": 7500,
+    "relic_level_bonus_bp": 5000,
+    "max_trigger_depth": 3
+  },
+  "status": {
+    "burn": { "max_stacks": 5, "duration_s": 3, "dps_per_stack_bp": 2000 },
+    "chill": { "max_stacks": 5, "duration_s": 4, "aps_penalty_per_stack_bp": 1000, "freeze_s": 1.5, "freeze_immunity_s": 3 },
+    "shock": { "bonus_bp": 3000 }
+  },
+  "enemy_scaling": {
+    "chapter_growth_bp": 14000,
+    "room_bonus_bp": 600
+  }
+}

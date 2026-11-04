@@ -1,0 +1,55 @@
+{
+  "enemies": [
+    {
+      "id": "moss_slime",
+      "name_key": "ENEMY_MOSS_SLIME",
+      "role": "normal",
+      "stats": { "hp": 70, "atk": 9, "aps_milli": 900, "armor_bp": 0 },
+      "effects": []
+    },
+    {
+      "id": "ember_imp",
+      "name_key": "ENEMY_EMBER_IMP",
+      "role": "normal",
+      "stats": { "hp": 45, "atk": 6, "aps_milli": 1500, "armor_bp": 0 },
+      "effects": [
+        { "trigger": "on_hit", "chance_bp": 3000, "action": { "type": "apply_status", "target": "target", "status": "burn", "stacks": 1 } }
+      ]
+    },
+    {
+      "id": "stone_sentinel",
+      "name_key": "ENEMY_STONE_SENTINEL",
+      "role": "normal",
+      "stats": { "hp": 85, "atk": 8, "aps_milli": 700, "armor_bp": 3000 },
+      "effects": []
+    },
+    {
+      "id": "lantern_wisp",
+      "name_key": "ENEMY_LANTERN_WISP",
+      "role": "normal",
+      "stats": { "hp": 55, "atk": 8, "aps_milli": 1000, "armor_bp": 0 },
+      "effects": [
+        { "trigger": "every_seconds", "seconds": 4, "action": { "type": "damage", "target": "target", "mult_bp": 15000, "kind": "flare" } }
+      ]
+    },
+    {
+      "id": "ruin_brute",
+      "name_key": "ENEMY_RUIN_BRUTE",
+      "role": "elite",
+      "stats": { "hp": 170, "atk": 11, "aps_milli": 800, "armor_bp": 1500 },
+      "effects": [
+        { "trigger": "hp_below", "threshold_bp": 5000, "action": { "type": "modify_stat", "target": "self", "stat": "aps_bonus_bp", "add": 3000 } }
+      ]
+    },
+    {
+      "id": "gatekeeper_golem",
+      "name_key": "ENEMY_GATEKEEPER_GOLEM",
+      "role": "boss",
+      "stats": { "hp": 460, "atk": 12, "aps_milli": 700, "armor_bp": 2000 },
+      "effects": [
+        { "trigger": "every_seconds", "seconds": 6, "action": { "type": "damage", "target": "target", "mult_bp": 25000, "kind": "slam" } },
+        { "trigger": "hp_below", "threshold_bp": 5000, "action": { "type": "modify_stat", "target": "self", "stat": "aps_bonus_bp", "add": 3000 } }
+      ]
+    }
+  ]
+}

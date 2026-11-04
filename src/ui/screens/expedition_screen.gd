@@ -163,6 +163,7 @@ func _start_battle() -> void:
 	_battle.screen_shake = bool(Game.settings.get("screen_shake", true))
 	for res_id: String in expedition.db.resonances:
 		_battle.resonance_names[res_id] = tr(expedition.db.resonances[res_id]["name_key"])
+		_battle.resonance_tags[res_id] = expedition.db.resonances[res_id]["requires_tags"]
 	_body.add_child(_battle)
 	_battle.play(battle, expedition.factory.cfg.tps)
 	_battle.finished.connect(_refresh, CONNECT_ONE_SHOT)
@@ -216,6 +217,7 @@ func _relic_card(offer: Dictionary, index: int) -> Control:
 	b.add_theme_stylebox_override("hover", style)
 	b.add_theme_stylebox_override("pressed", style)
 	b.pressed.connect(func() -> void:
+		UiKit.sfx("pick")
 		expedition.pick_relic(index)
 		_refresh())
 	var title := UiKit.label(tr(def["name_key"]), "HeadingLabel")
@@ -269,6 +271,7 @@ func _show_results() -> void:
 		var codex_before := Game.profile.codex_relics.size() + Game.profile.codex_resonances.size()
 		_result = Game.finish_expedition()
 		_result.set_meta("new_codex", Game.profile.codex_relics.size() + Game.profile.codex_resonances.size() - codex_before)
+		UiKit.sfx("victory" if _result.won else "defeat")
 	var r := _result
 	var column := UiKit.vbox([], 18)
 	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

@@ -28,9 +28,22 @@ static func button(text: String, on_press: Callable, variation: String = "", min
 	b.custom_minimum_size = Vector2(min_width, TOUCH_HEIGHT)
 	if variation != "":
 		b.theme_type_variation = variation
+	b.pressed.connect(_click)
 	if on_press.is_valid():
 		b.pressed.connect(on_press)
 	return b
+
+
+static func _click() -> void:
+	sfx("button", -8.0)
+
+
+## Plays a sound through the Audio autoload if it is running.
+static func sfx(sound: String, volume_db: float = 0.0) -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	var audio := tree.root.get_node_or_null("Audio") if tree != null else null
+	if audio != null:
+		audio.play(sound, volume_db)
 
 
 static func vbox(children: Array = [], separation: int = -1) -> VBoxContainer:

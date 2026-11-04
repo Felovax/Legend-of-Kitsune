@@ -14,6 +14,8 @@ var speed: float = 2.0
 var reduced_effects: bool = false
 var screen_shake: bool = true
 var resonance_names: Dictionary = {}
+## resonance id -> element tags, for the chord.
+var resonance_tags: Dictionary = {}
 
 var _tps: int = 20
 var _clock: float = 0.0
@@ -165,6 +167,12 @@ func _apply(e: Dictionary, instant: bool) -> void:
 					text = tr("Blocked")
 				_float_text(int(e["dst"]), text, KIND_COLORS.get(kind, Color.WHITE), big)
 				_flash(int(e["dst"]))
+				if kind == "slam":
+					UiKit.sfx("slam")
+				elif e.get("crit", false):
+					UiKit.sfx("crit", -4.0)
+				elif kind == "hit":
+					UiKit.sfx("hit", -10.0)
 				if big and screen_shake and not reduced_effects:
 					_shake(14.0 if kind == "slam" else 8.0)
 		"heal":
@@ -181,6 +189,9 @@ func _apply(e: Dictionary, instant: bool) -> void:
 		"proc":
 			if e.get("source_kind", "") == "resonance" and not instant:
 				_show_banner(resonance_names.get(e["source"], String(e["source"])))
+				var audio := get_node_or_null("/root/Audio")
+				if audio != null:
+					audio.play_chord(resonance_tags.get(e["source"], []))
 		"death":
 			var u: Dictionary = _units.get(int(e["dst"]), {})
 			if not u.is_empty():

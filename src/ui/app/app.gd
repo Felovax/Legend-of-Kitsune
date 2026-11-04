@@ -27,6 +27,8 @@ func _ready() -> void:
 	Game.expedition_started.connect(_open_expedition)
 	_refresh_bar()
 	show_tab("camp")
+	if Game.expedition != null:
+		_open_expedition(Game.expedition)
 
 
 func _build() -> void:

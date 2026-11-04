@@ -12,6 +12,9 @@ extends RefCounted
 
 enum Phase { DOOR, BATTLE, DRAFT, EVENT, FINISHED }
 
+## Emitted after every player action, so the game can save progress mid-run.
+signal action_taken(action: Array)
+
 const STREAM_DOORS := 1
 const STREAM_ENCOUNTERS := 2
 const STREAM_DRAFT := 3
@@ -49,6 +52,10 @@ var event_id: String = ""
 var last_battle: BattleResult = null
 ## Run-level story for the UI and analytics.
 var history: Array[Dictionary] = []
+## Every player action in order, e.g. ["door", 1], ["fight"], ["pick", 0].
+## Replaying them on a fresh Expedition with the same seed rebuilds this one.
+var actions: Array = []
+var _start_profile: Dictionary = {}
 
 var _result := RunResult.new()
 var _rng_doors: Rng32
@@ -65,6 +72,52 @@ static func start(content: ContentDB, profile: PlayerProfile, chapter_number: in
 	return Expedition.new(content, profile, chapter_number, Rng32.derive_seed(profile.seed_base, counter), "r%d" % counter)
 
 
+## Everything needed to rebuild this expedition later (after an app restart).
+func to_snapshot() -> Dictionary:
+	return {"chapter": chapter, "seed": run_seed, "run_id": run_id, "profile": _start_profile.duplicate(true),
+		"actions": actions.duplicate(true)}
+
+
+## Rebuilds an expedition from a snapshot by replaying its actions.
+## Returns null if the snapshot is unusable.
+static func restore(content: ContentDB, snapshot: Dictionary) -> Expedition:
+	if not snapshot.get("profile") is Dictionary or not snapshot.get("actions") is Array:
+		return null
+	var profile := PlayerProfile.from_dict(snapshot["profile"])
+	var exp := Expedition.new(content, profile, int(snapshot.get("chapter", 1)), int(snapshot.get("seed", 0)),
+		str(snapshot.get("run_id", "")))
+	for a: Variant in snapshot["actions"]:
+		if not a is Array or (a as Array).is_empty() or not exp._replay(a):
+			return null
+	return exp
+
+
+func _replay(a: Array) -> bool:
+	var arg := int(a[1]) if a.size() > 1 else 0
+	match str(a[0]):
+		"door":
+			return choose_door(arg) == Progression.OK
+		"fight":
+			return fight() != null
+		"pick":
+			return pick_relic(arg) == Progression.OK
+		"reroll":
+			return reroll() == Progression.OK
+		"skip":
+			return skip_draft() == Progression.OK
+		"event":
+			return choose_event_option(arg) == Progression.OK
+		"abandon":
+			abandon()
+			return true
+	return false
+
+
+func _record(action: Array) -> void:
+	actions.append(action)
+	action_taken.emit(action)
+
+
 func _init(content: ContentDB, profile: PlayerProfile, chapter_number: int, seed_value: int, id: String) -> void:
 	db = content
 	prog = Progression.new(db)
@@ -74,6 +127,9 @@ func _init(content: ContentDB, profile: PlayerProfile, chapter_number: int, seed
 	chapter_def = db.chapter_def(chapter)
 	run_id = id
 	run_seed = seed_value
+	_start_profile = profile.to_dict()
+	for transient in ["wallet", "applied_runs", "active_run", "counters"]:
+		_start_profile.erase(transient)
 	rooms = int(run_cfg["rooms"])
 	first_clear = chapter > profile.best_chapter
 	hero_id = profile.hero_id
@@ -106,6 +162,7 @@ func choose_door(index: int) -> String:
 	if phase != Phase.DOOR or index < 0 or index >= doors.size():
 		return Progression.ERR_UNKNOWN
 	room_kind = doors[index]
+	actions.append(["door", index])
 	history.append({"type": "door", "room": room, "kind": room_kind})
 	match room_kind:
 		"fight", "elite", "boss":
@@ -118,6 +175,7 @@ func choose_door(index: int) -> String:
 		"event":
 			event_id = db.event_order[_rng_events.next_below(db.event_order.size())]
 			phase = Phase.EVENT
+	action_taken.emit(actions[-1])
 	return Progression.OK
 
 
@@ -131,12 +189,14 @@ func fight() -> BattleResult:
 		sim.add_unit(factory.make_enemy(enemy_id, chapter, room))
 	var battle := sim.run()
 	last_battle = battle
+	actions.append(["fight"])
 	_result.battles += 1
 	_result.battle_ticks += battle.ticks
 	hero_hp = battle.hero_hp
 	history.append({"type": "battle", "room": room, "kind": room_kind, "outcome": battle.outcome, "ticks": battle.ticks})
 	if not battle.hero_won():
 		_finish(false)
+		action_taken.emit(actions[-1])
 		return battle
 	_result.rooms_cleared = room
 	_result.gold += prog.room_gold(chapter, room_kind, not first_clear)
@@ -148,9 +208,11 @@ func fight() -> BattleResult:
 			_result.gold += Fx.bp(prog.room_gold(chapter, "boss", false), int(rewards["first_clear_bonus_bp"]))
 		_result.shards += int(rewards["shards_win_bonus"])
 		_finish(true)
+		action_taken.emit(actions[-1])
 		return battle
 	_heal(int(run_cfg["heal_between_rooms_bp"]))
 	_open_draft()
+	action_taken.emit(actions[-1])
 	return battle
 
 
@@ -162,6 +224,7 @@ func pick_relic(index: int) -> String:
 	history.append({"type": "pick", "room": room, "relic": relic_id, "level": relics[relic_id]})
 	draft_offer.clear()
 	_advance()
+	_record(["pick", index])
 	return Progression.OK
 
 
@@ -172,6 +235,7 @@ func reroll() -> String:
 		return Progression.ERR_FUNDS
 	rerolls_left -= 1
 	draft_offer = _make_offer()
+	_record(["reroll"])
 	return Progression.OK
 
 
@@ -180,6 +244,7 @@ func skip_draft() -> String:
 		return Progression.ERR_UNKNOWN
 	draft_offer.clear()
 	_advance()
+	_record(["skip"])
 	return Progression.OK
 
 
@@ -210,6 +275,7 @@ func choose_event_option(index: int) -> String:
 	history.append({"type": "event", "room": room, "event": event_id, "option": option["id"]})
 	event_id = ""
 	_advance()
+	_record(["event", index])
 	return Progression.OK
 
 
@@ -217,6 +283,7 @@ func choose_event_option(index: int) -> String:
 func abandon() -> void:
 	if phase != Phase.FINISHED:
 		_finish(false)
+		_record(["abandon"])
 
 
 # --- queries -------------------------------------------------------------------------

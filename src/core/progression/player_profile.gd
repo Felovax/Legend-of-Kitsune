@@ -36,6 +36,9 @@ var run_counter: int = 0
 var last_seen_unix: int = 0
 ## Simple counters (runs, wins, losses, ...).
 var counters: Dictionary = {}
+## Snapshot of an unfinished expedition (Expedition.to_snapshot), so it can be
+## resumed after the app is closed or killed. Empty when none.
+var active_run: Dictionary = {}
 
 
 func gear_by_uid(uid: int) -> Dictionary:
@@ -70,6 +73,7 @@ func to_dict() -> Dictionary:
 		"run_counter": run_counter,
 		"last_seen_unix": last_seen_unix,
 		"counters": counters.duplicate(),
+		"active_run": active_run.duplicate(true),
 	}
 
 
@@ -98,6 +102,8 @@ static func from_dict(d: Dictionary) -> PlayerProfile:
 	p.run_counter = maxi(0, int(d.get("run_counter", 0)))
 	p.last_seen_unix = int(d.get("last_seen_unix", 0))
 	p.counters = _int_values(d.get("counters", {}))
+	var run: Variant = d.get("active_run", {})
+	p.active_run = (run as Dictionary).duplicate(true) if run is Dictionary else {}
 	return p
 
 

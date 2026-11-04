@@ -39,6 +39,14 @@ func boot(save_dir: String = SaveService.DEFAULT_DIR, settings_path: String = SE
 	var loaded := saves.load_profile()
 	profile = loaded["profile"] if loaded["ok"] else _new_profile()
 	last_offline = prog.claim_offline(profile, now())
+	expedition = null
+	if not profile.active_run.is_empty():
+		expedition = Expedition.restore(db, profile.active_run)
+		if expedition == null:
+			push_warning("could not resume the saved expedition; it was discarded")
+			profile.active_run = {}
+		else:
+			expedition.action_taken.connect(_on_expedition_action)
 	booted = true
 	save()
 	profile_changed.emit()
@@ -87,9 +95,23 @@ func start_expedition(chapter: int) -> Expedition:
 	if not prog.can_start(profile, chapter):
 		return null
 	expedition = Expedition.start(db, profile, chapter)
+	profile.active_run = expedition.to_snapshot()
+	expedition.action_taken.connect(_on_expedition_action)
 	save()
 	expedition_started.emit(expedition)
 	return expedition
+
+
+## True when an unfinished expedition was restored at boot.
+func has_resumable_expedition() -> bool:
+	return expedition != null and not expedition.is_finished()
+
+
+## Saves the expedition's progress after every choice.
+func _on_expedition_action(_action: Array) -> void:
+	if expedition != null:
+		profile.active_run["actions"] = expedition.actions.duplicate(true)
+		save()
 
 
 ## Applies the finished expedition's rewards (once) and saves.
@@ -100,6 +122,7 @@ func finish_expedition() -> RunResult:
 		expedition.abandon()
 	var result := expedition.result()
 	prog.apply_run_result(profile, result)
+	profile.active_run = {}
 	expedition = null
 	save()
 	expedition_finished.emit(result)

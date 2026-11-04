@@ -1,0 +1,26 @@
+# Godot
+.godot/
+.import/
+*.translation
+export_presets.cfg.local
+/build/
+/exports/
+
+# Secrets (never commit)
+*.p8
+*.keystore
+*.jks
+service-account*.json
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Python tooling
+__pycache__/
+*.pyc

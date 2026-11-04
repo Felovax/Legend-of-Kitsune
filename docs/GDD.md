@@ -22,6 +22,7 @@ Target audience: casual-to-midcore mobile RPG players (the audience of Capybara 
 - The hero is a chibi kitsune: big head, big amber eyes, cream-and-orange fur, one fluffy tail with a glowing tip, and a small explorer's satchel with a paper lantern charm. Name to be decided.
 - **In a run:** each active Resonance adds a glowing tail, up to 9, plus a small bonus (first pass: +5% ATK per tail). Tail colour follows the Resonance's elements.
 - **Permanent (post-MVP), "Tail Awakening":** the kitsune starts with 1 tail. Tails 2–9 unlock at progression milestones; each grants a permanent perk (extra reroll, an extra draft option, a bigger offline cap, a new door type). "Awaken all nine tails" is the long-term goal and the marketing hook.
+- **At Camp (now):** the kitsune shows 1 + discovered Resonances tails, a visible sign of collection progress.
 - Cosmetics: tail and fur skins (no stats).
 
 ## 4. Core loop

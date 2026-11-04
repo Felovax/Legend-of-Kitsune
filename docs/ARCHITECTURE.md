@@ -14,10 +14,16 @@ src/core/              pure logic: no Nodes, no wall-clock time, no global rando
                        Progression (levels, training, attunement, gear, power, rewards, offline income)
   save/                SaveCodec (schema version + migration chain)
   shop/       (M4)     catalog, eligibility, purchase flow, idempotent grants
-src/services/          SaveService (atomic write, 2 backups, checksum); later GameState, StoreService,
-                       Analytics, Audio
+src/services/          SaveService (atomic write, 2 backups, checksum); autoloads Game (GameState) and Audio
 src/platform/ (M4/M6)  store adapters: fake, Apple (godot-iap), Google (Play Billing)
-src/ui/                screens and views; the battle view replays BattleResult.events
+src/ui/
+  app/                 App shell: backdrop, currency bar, bottom tabs, expedition takeover, toasts
+  screens/             Camp, Expedition, Hero, Codex, Settings, Shop (stub)
+  battle/              BattleView: replays BattleResult.events (damage numbers, statuses, banner, skip)
+  kit/                 UiKit helpers, IconDraw, CreatureDraw (placeholder art), Backdrop
+  theme/               Palette (all colours) and UiTheme (code-built Theme, OFL fonts)
+assets/                fonts (+ OFL licences), audio (generated), icon; sprites/<id>.png when AI art arrives
+localization/          strings.csv (English); UI uses English msgids via tr(), content uses keys
 tests/                 headless tests (run_tests.gd, test_case.gd, sim_test_case.gd, unit/, fixtures/)
 tools/                 test.sh, validate_content.gd, balance_sim.gd
 docs/                  design, economy, decisions, roadmap, art prompts
@@ -63,7 +69,14 @@ Adding a relic means adding JSON only. A new trigger, action, status or stat mea
 - Loading tries main → backup1 → backup2 → temp, so a corrupt or interrupted save falls back to the newest valid copy.
 - A newer schema is refused. Older schemas run through `SaveCodec.steps()` (one tested step per version).
 
-### 7. Simulation tools
+### 7. UI layer (M3)
+- `Game` (autoload, `src/services/game_state.gd`) owns the profile at runtime: `boot()`, `save()`, offline claim on resume, expedition start/finish, upgrade wrappers that save and emit `profile_changed`. Screens never change the profile directly.
+- `boot()` is called by the App scene, never in `_ready`, so tests and tools can boot it with their own save folders.
+- Screens are code-built `Control`s. Text goes through `tr()`; colours come only from `Palette`.
+- `BattleView` animates a finished `BattleResult`. Speed and skip never affect the outcome.
+- `tools/screenshot.gd` renders any scene or `.gd` screen to PNG under `xvfb-run` (see `tools/preview/`), for visual review in CI or by AI.
+
+### 8. Simulation tools
 - `tools/economy_sim.gd`: day-by-day player archetypes (casual/active free, three spender levels) using the real code: offline claims, gem caches, greedy upgrades and AutoPilot expeditions within a time budget. This is the tool for pacing decisions.
 - `tools/balance_sim.gd`: raw combat power probe (simplified rooms, power multiplier).
 

@@ -24,3 +24,9 @@ Settled decisions and why. Add new entries at the bottom; to change a decision, 
 | 18 | 2026-11-04 | **Never name members after GDScript/Object built-ins** (`has_meta`, `sign`, `seed`, `log`, ...) | Two bugs came from this; the names collide silently with engine functions. |
 | 19 | 2026-11-04 | **The Godot economy sim replaces the Python planning model** | One source of truth: it runs the real expedition, combat, upgrade and reward code. |
 | 20 | 2026-11-04 | **Meta-game data files are optional when loading** (required by the game and by `validate_content.gd`) | Lets combat-only fixtures (the golden test) stay small and frozen. |
+| 21 | 2026-11-04 | **UI is built in GDScript code (minimal `.tscn`)** with a code-built Theme and a small `UiKit` | Text-only, easy for AI to generate and review, testable headless; screens are plain `Control` classes. |
+| 22 | 2026-11-04 | **Placeholder art is vector-drawn in code; real sprites drop in by file name** (`assets/sprites/<creature_id>.png`) | The game is fully playable before the AI art exists; no code change when art arrives. |
+| 23 | 2026-11-04 | **Sound effects are generated (sine/noise), one bell note per element; a Resonance plays its tags as a chord** | Zero licensing risk; a distinctive audio identity that grows with content. |
+| 24 | 2026-11-04 | **Tests run on the first frame**, not in `_initialize` | Only then are the scene tree and autoloads live, so UI nodes get `_ready`. |
+| 25 | 2026-11-04 | **Playtest builds come from CI**: every push to main/milestone branches builds a debug APK artifact | The owner can install and play on a phone without any local Android tooling. |
+| 26 | 2026-11-04 | **Camp kitsune shows 1 + discovered Resonances tails** (max 9) | A visible, permanent sign of collection progress until the Tail Awakening system (v1.0). |

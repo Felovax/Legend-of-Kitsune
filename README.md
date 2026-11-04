@@ -6,7 +6,7 @@ A portrait mobile roguelite RPG for iOS and Android. A little kitsune delves int
 
 ## Status
 
-Pre-production. Development follows the milestones in `docs/ROADMAP.md`.
+Pre-production. M0 (project setup) and M1 (combat simulation core, 77 tests) are done. Next: M2 (expedition and progression).
 
 ## Tech
 
@@ -16,7 +16,7 @@ Pre-production. Development follows the milestones in `docs/ROADMAP.md`.
 
 ## Repository layout
 
-See `docs/ARCHITECTURE.md`. In short: `src/core` holds pure, deterministic game logic, `data` holds JSON content, `src/ui` holds the views, and `tests` holds the headless tests.
+See `docs/ARCHITECTURE.md`. Design: `docs/GDD.md`, economy: `docs/ECONOMY.md`, decisions: `docs/DECISIONS.md`, roadmap: `docs/ROADMAP.md`, art prompts: `docs/ART_PROMPTS.md`. In short: `src/core` holds pure, deterministic game logic, `data` holds JSON content, `src/ui` holds the views, and `tests` holds the headless tests.
 
 ## Running the tests
 

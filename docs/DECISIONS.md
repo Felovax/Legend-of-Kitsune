@@ -1,0 +1,21 @@
+# Decision log
+
+Settled decisions and why. Add new entries at the bottom; to change a decision, add a new entry that supersedes the old one.
+
+| # | Date | Decision | Why |
+|---|---|---|---|
+| 1 | 2026-11-04 | **Engine: Godot 4.7 + GDScript** | Free (MIT), 2D-first, text-based scenes that AI can edit, headless tests on Linux, small builds. C# on iOS is still experimental, so GDScript. Weak spot: iOS in-app purchases rely on a third-party plugin, so they sit behind a `StoreAdapter` interface. |
+| 2 | 2026-11-04 | **Title: "Legend of Kitsune"** (working title) | "Relic Hunters" is an existing franchise by Rogue Snail (Zero, Rebels on Netflix mobile, Legend). Hits in this genre are named after their mascot. Formal trademark search needed before launch. |
+| 3 | 2026-11-04 | **Mascot: a cute kitsune that gains tails** | Cute-animal mascots drive the genre's marketing. Tails give visible power growth (one per Resonance in a run; up to nine as permanent progression). |
+| 4 | 2026-11-04 | **Visual direction: bright, colourful chibi cartoon with a rich UI**, in the genre language of games like Legend of Mushroom, without copying any assets, layouts or characters | The owner's choice after reviewing concepts. |
+| 5 | 2026-11-04 | **Art produced with AI image tools** (owner's choice) | Fast and cheap. Trade-off: purely AI-generated art is not copyrightable in the US, so others can copy the mascot. Keep a provenance log (`docs/ASSET_LOG.md`) and check each tool's commercial terms. |
+| 6 | 2026-11-04 | **One premium currency (Gems); no paid random rewards** | FTC v. HoYoverse (2025), Brazil's ECA Digital loot-box ban for minors (March 2026), EU CPC principles on virtual currencies, and Apple's odds-disclosure rule all point the same way. Fixed-content bundles only. |
+| 7 | 2026-11-04 | **No energy system at launch** | Energy walls are the genre's most-hated mechanic. Revisit only if soft-launch data shows pacing problems. |
+| 8 | 2026-11-04 | **Deterministic, integer-only combat that emits an event log** | Enables replays, battle skip, golden tests, balance simulation and future server-verified PvP. |
+| 9 | 2026-11-04 | **Own RNG (xoshiro128\*\*) in 32-bit-safe math** | Engine RNG implementations can change between versions; ours is pinned by known-answer tests against a Python reference, and is easy to port to a server. |
+| 10 | 2026-11-04 | **Content as JSON + validator**, not Godot `.tres` | Portable to a future backend (shop catalog, balance), easy to diff and to generate, and validated with readable errors. |
+| 11 | 2026-11-04 | **Custom ~150-line test runner** instead of GUT/gdUnit4 | No third-party dependency. It uses Godot 4.5+'s `Logger` API to fail tests on engine or script errors, and fails tests that make no assertions. |
+| 12 | 2026-11-04 | **Compatibility (OpenGL) renderer** | Widest device support for a 2D mobile game, including low-end Android devices without good Vulkan drivers. |
+| 13 | 2026-11-04 | **Statuses last their full duration**: timers don't count down on the tick a status is applied | Found by a test: Freeze lasted 29 ticks instead of 30. |
+| 14 | 2026-11-04 | **Burn ignores armor** | Gives Ember builds a clear role against armored enemies. Build diversity. |
+| 15 | 2026-11-04 | **Golden replay test uses a frozen content fixture** | Balance tuning in `data/` must not break the determinism test; only rule changes should. |

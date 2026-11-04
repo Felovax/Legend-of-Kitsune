@@ -92,6 +92,8 @@ func _is_number(value: Variant) -> bool:
 func _equals(a: Variant, b: Variant) -> bool:
 	if _is_number(a) and _is_number(b):
 		return a == b
+	if (a is String or a is StringName) and (b is String or b is StringName):
+		return String(a) == String(b)
 	if typeof(a) != typeof(b):
 		return false
 	return a == b

@@ -1,0 +1,56 @@
+keys,en
+HERO_KITSUNE,Kitsune
+ENEMY_MOSS_SLIME,Moss Slime
+ENEMY_EMBER_IMP,Ember Imp
+ENEMY_STONE_SENTINEL,Stone Sentinel
+ENEMY_LANTERN_WISP,Lantern Wisp
+ENEMY_RUIN_BRUTE,Ruin Brute
+ENEMY_GATEKEEPER_GOLEM,Gatekeeper Golem
+RELIC_EMBER_STONE,Ember Stone
+RELIC_EMBER_STONE_DESC,Hits apply Burn: 20% ATK per second for 3s (stacks 5).
+RELIC_FROZEN_CORE,Frozen Core
+RELIC_FROZEN_CORE_DESC,Hits apply Chill. 5 stacks Freeze the enemy.
+RELIC_STORM_CRYSTAL,Storm Crystal
+RELIC_STORM_CRYSTAL_DESC,Every 4th attack throws a bolt for 120% ATK.
+RELIC_CHAIN,Chain Relic
+RELIC_CHAIN_DESC,On-hit effects and bolts also hit 1 more enemy.
+RELIC_WHETSTONE,Whetstone
+RELIC_WHETSTONE_DESC,+15% crit chance and +30% crit damage.
+RELIC_BLOOD_CHALICE,Blood Chalice
+RELIC_BLOOD_CHALICE_DESC,Heal for 4% of the damage your hits deal.
+RELIC_WARD_STONE,Ward Stone
+RELIC_WARD_STONE_DESC,Start each fight with a shield of 25% max HP.
+RELIC_HOURGLASS,Hourglass
+RELIC_HOURGLASS_DESC,+20% attack speed.
+RESONANCE_THERMAL_SHOCK,Thermal Shock
+RESONANCE_THERMAL_SHOCK_DESC,Freezing a burning enemy shatters it for 150% of its remaining Burn.
+RESONANCE_ARC_STORM,Arc Storm
+RESONANCE_ARC_STORM_DESC,Every 4th attack arcs to 2 more enemies and Shocks them all.
+RESONANCE_CRIMSON_EDGE,Crimson Edge
+RESONANCE_CRIMSON_EDGE_DESC,Crits heal 3% max HP; extra healing becomes a shield.
+CHAPTER_1,Lantern Steps
+CHAPTER_2,Mossy Courtyard
+CHAPTER_3,Sentinel Hall
+CHAPTER_4,Ember Shrine
+CHAPTER_5,The Golem's Gate
+EVENT_WISHING_WELL,Wishing Well
+EVENT_WISHING_WELL_DESC,A glowing well hums with old magic.
+EVENT_WISHING_WELL_TOSS,Toss a coin (gain gold)
+EVENT_WISHING_WELL_DRINK,Drink (heal 40%)
+EVENT_CURSED_ALTAR,Cursed Altar
+EVENT_CURSED_ALTAR_DESC,The altar offers power at a price.
+EVENT_CURSED_ALTAR_ACCEPT,"Accept (lose 20% HP, upgrade a relic)"
+EVENT_CURSED_ALTAR_LEAVE,Walk away
+EVENT_LOST_TRAVELER,Lost Traveler
+EVENT_LOST_TRAVELER_DESC,A lost fox spirit asks for help.
+EVENT_LOST_TRAVELER_HELP,Help (gain 10 shards)
+EVENT_LOST_TRAVELER_TRADE,Trade (gain a random relic)
+TRAINING_MIGHT,Might
+TRAINING_VITALITY,Vitality
+TRAINING_FINESSE,Finesse
+GEAR_FOX_FANG_BLADE,Fox Fang Blade
+GEAR_EMBER_FAN,Ember Fan
+GEAR_LUCKY_CHARM,Lucky Charm
+GEAR_SWIFT_BELL,Swift Bell
+GEAR_SPIRIT_ROBE,Spirit Robe
+GEAR_WARDING_ROBE,Warding Robe

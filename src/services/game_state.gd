@@ -1,0 +1,165 @@
+extends Node
+## Autoload "Game": owns the player's profile at runtime. Screens read state
+## from here and call its methods; they never change the profile directly.
+## boot() is called by the App scene (not in _ready), so headless tests that
+## load the project never touch real save files.
+
+signal profile_changed
+signal expedition_started(expedition: Expedition)
+signal expedition_finished(result: RunResult)
+signal settings_changed
+
+const SETTINGS_PATH := "user://settings.cfg"
+const DEFAULT_SETTINGS := {
+	"music": true, "sfx": true, "reduced_effects": false, "screen_shake": true, "text_scale": 1.0, "battle_speed": 2,
+}
+
+var db: ContentDB
+var prog: Progression
+var profile: PlayerProfile
+var saves: SaveService
+var expedition: Expedition = null
+## Offline income granted at the last boot/resume: {minutes, gold}.
+var last_offline: Dictionary = {}
+var settings: Dictionary = DEFAULT_SETTINGS.duplicate()
+var booted := false
+var _settings_path := SETTINGS_PATH
+
+
+## Loads content, the profile (or creates one) and settings, then claims offline income.
+func boot(save_dir: String = SaveService.DEFAULT_DIR, settings_path: String = SETTINGS_PATH) -> bool:
+	db = ContentDB.load_from_dir()
+	if not db.is_valid():
+		push_error("content invalid: " + " | ".join(db.errors))
+		return false
+	prog = Progression.new(db)
+	saves = SaveService.new(save_dir)
+	_settings_path = settings_path
+	_load_settings()
+	var loaded := saves.load_profile()
+	profile = loaded["profile"] if loaded["ok"] else _new_profile()
+	last_offline = prog.claim_offline(profile, now())
+	booted = true
+	save()
+	profile_changed.emit()
+	return true
+
+
+func now() -> int:
+	return int(Time.get_unix_time_from_system())
+
+
+func save() -> void:
+	if profile == null:
+		return
+	profile.last_seen_unix = now()
+	var err := saves.save(profile)
+	if err != OK:
+		push_warning("save failed: %d" % err)
+
+
+func _notification(what: int) -> void:
+	if not booted:
+		return
+	match what:
+		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_WM_CLOSE_REQUEST, NOTIFICATION_APPLICATION_FOCUS_OUT:
+			save()
+		NOTIFICATION_APPLICATION_RESUMED:
+			last_offline = prog.claim_offline(profile, now())
+			save()
+			profile_changed.emit()
+
+
+func _new_profile() -> PlayerProfile:
+	var p := PlayerProfile.new()
+	var bytes := Crypto.new().generate_random_bytes(6)
+	for b in bytes:
+		p.seed_base = (p.seed_base << 8) | b
+	p.last_seen_unix = now()
+	return p
+
+
+# --- expeditions --------------------------------------------------------------------
+
+func start_expedition(chapter: int) -> Expedition:
+	if expedition != null and not expedition.is_finished():
+		return expedition
+	if not prog.can_start(profile, chapter):
+		return null
+	expedition = Expedition.start(db, profile, chapter)
+	save()
+	expedition_started.emit(expedition)
+	return expedition
+
+
+## Applies the finished expedition's rewards (once) and saves.
+func finish_expedition() -> RunResult:
+	if expedition == null:
+		return null
+	if not expedition.is_finished():
+		expedition.abandon()
+	var result := expedition.result()
+	prog.apply_run_result(profile, result)
+	expedition = null
+	save()
+	expedition_finished.emit(result)
+	profile_changed.emit()
+	return result
+
+
+# --- upgrades (each saves and notifies on success) -------------------------------------
+
+func level_up() -> String:
+	return _commit(prog.level_up(profile))
+
+
+func train(id: String) -> String:
+	return _commit(prog.train(profile, id))
+
+
+func attune(relic_id: String) -> String:
+	return _commit(prog.attune(profile, relic_id))
+
+
+func enhance(uid: int) -> String:
+	return _commit(prog.enhance(profile, uid))
+
+
+func equip(uid: int) -> String:
+	return _commit(prog.equip(profile, uid))
+
+
+func merge(item_id: String, rarity: String) -> String:
+	return _commit(prog.merge(profile, item_id, rarity))
+
+
+func choose_echo(relic_id: String) -> String:
+	return _commit(prog.choose_echo(profile, relic_id))
+
+
+func _commit(code: String) -> String:
+	if code == Progression.OK:
+		save()
+		profile_changed.emit()
+	return code
+
+
+# --- settings ------------------------------------------------------------------------------
+
+func set_setting(key: String, value: Variant) -> void:
+	if not DEFAULT_SETTINGS.has(key):
+		return
+	settings[key] = value
+	var cfg := ConfigFile.new()
+	for k: String in settings:
+		cfg.set_value("settings", k, settings[k])
+	cfg.save(_settings_path)
+	settings_changed.emit()
+
+
+func _load_settings() -> void:
+	settings = DEFAULT_SETTINGS.duplicate()
+	var cfg := ConfigFile.new()
+	if cfg.load(_settings_path) == OK:
+		for k: String in DEFAULT_SETTINGS:
+			settings[k] = cfg.get_value("settings", k, DEFAULT_SETTINGS[k])

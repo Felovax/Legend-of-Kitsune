@@ -30,7 +30,19 @@ class ErrorCounter extends Logger:
 		return out
 
 
-func _initialize() -> void:
+var _started := false
+
+
+## Tests run on the first frame (not in _initialize) so the scene tree and
+## autoloads are live and UI nodes receive _ready.
+func _process(_delta: float) -> bool:
+	if not _started:
+		_started = true
+		_run_all()
+	return false
+
+
+func _run_all() -> void:
 	var counter := ErrorCounter.new()
 	OS.add_logger(counter)
 	var filter := OS.get_environment("TEST_FILTER")

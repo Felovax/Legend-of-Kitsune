@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Legend of Kitsune"
 config/version="0.1.0"
-run/main_scene="res://src/ui/boot/boot.tscn"
+run/main_scene="res://src/ui/app/app.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [display]
@@ -29,3 +29,11 @@ window/handheld/orientation=1
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+
+[autoload]
+
+Game="*res://src/services/game_state.gd"
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://localization/strings.en.translation")

@@ -14,12 +14,21 @@ func _initialize() -> void:
 	var scene_path: String = args.get("scene", ProjectSettings.get_setting("application/run/main_scene"))
 	var out: String = args.get("out", "user://screenshot.png")
 	var frames := int(args.get("frames", "10"))
-	var packed := load(scene_path) as PackedScene
-	if packed == null:
-		printerr("cannot load scene " + scene_path)
+	# A .gd path is instantiated with new() (for code-built screens and previews).
+	var node: Node = null
+	if scene_path.ends_with(".gd"):
+		var script := load(scene_path) as GDScript
+		node = script.new() if script != null else null
+	else:
+		var packed := load(scene_path) as PackedScene
+		node = packed.instantiate() if packed != null else null
+	if node == null:
+		printerr("cannot load " + scene_path)
 		quit(1)
 		return
-	root.add_child(packed.instantiate())
+	if node is Control:
+		(node as Control).set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(node)
 	for i in frames:
 		await process_frame
 	await RenderingServer.frame_post_draw

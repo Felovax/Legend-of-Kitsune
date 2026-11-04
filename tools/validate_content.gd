@@ -5,6 +5,8 @@ extends SceneTree
 
 func _initialize() -> void:
 	var db := ContentDB.load_from_dir()
+	if db.is_valid() and not db.has_meta_content():
+		db.errors.append("data/: progression, gear, chapters and events files are all required by the game")
 	if db.is_valid():
 		print("content OK: %d heroes, %d enemies, %d relics, %d resonances" % [
 			db.heroes.size(), db.enemies.size(), db.relics.size(), db.resonances.size()])

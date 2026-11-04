@@ -21,6 +21,236 @@ func _validate_all(data: Dictionary) -> void:
 	_validate_list(data, "relics", _validate_relic)
 	_validate_list(data, "resonances", _validate_resonance)
 	_validate_resonance_tags(data)
+	if data.has("progression"):
+		_validate_progression(data["progression"])
+	if data.has("gear"):
+		_validate_gear(data["gear"])
+	if data.has("chapters"):
+		_validate_chapters(data["chapters"], data)
+	if data.has("events"):
+		_validate_list(data, "events", _validate_event)
+
+
+# --- meta-game content ------------------------------------------------------
+
+func _validate_cost(d: Variant, path: String) -> void:
+	if not d is Dictionary:
+		_err("%s: missing cost curve" % path)
+		return
+	_require_int(d, "base", path, 1)
+	_require_int(d, "growth_bp", path, 10000)
+
+
+func _validate_progression(p: Variant) -> void:
+	if not p is Dictionary:
+		_err("progression: must be an object")
+		return
+	var hero: Variant = p.get("hero")
+	if not hero is Dictionary:
+		_err("progression.hero: missing")
+	else:
+		_require_int(hero, "level_stat_growth_bp", "progression.hero", 10000)
+		_validate_cost(hero.get("level_cost"), "progression.hero.level_cost")
+		_require_int(hero, "max_level_base", "progression.hero", 1)
+		_require_int(hero, "max_level_per_chapter", "progression.hero", 0)
+	var training: Variant = p.get("training")
+	if not training is Array or (training as Array).is_empty():
+		_err("progression.training: must be a non-empty list")
+	else:
+		var ids: PackedStringArray = []
+		for t: Variant in training:
+			if not t is Dictionary or not _is_id(t.get("id")):
+				_err("progression.training: each entry needs an id")
+				continue
+			var path := "progression.training[%s]" % t["id"]
+			if ids.has(t["id"]):
+				_err("%s: duplicate id" % path)
+			ids.append(t["id"])
+			_require_int(t, "max_rank", path, 1)
+			_validate_cost(t.get("cost"), path + ".cost")
+			var gives := false
+			for key in ["atk_pct_bp", "hp_pct_bp", "crit_bp", "crit_dmg_bp"]:
+				if t.has(key):
+					_require_int(t, key, path, 0)
+					gives = true
+			if not gives:
+				_err("%s: grants no stat" % path)
+	var att: Variant = p.get("attunement")
+	if not att is Dictionary:
+		_err("progression.attunement: missing")
+	else:
+		_require_int(att, "potency_per_level_bp", "progression.attunement", 0)
+		_require_int(att, "max_level", "progression.attunement", 1)
+		_validate_cost(att.get("cost"), "progression.attunement.cost")
+	var run: Variant = p.get("run")
+	if not run is Dictionary:
+		_err("progression.run: missing")
+	else:
+		for key in ["rooms", "elite_room", "draft_size", "max_tails", "minutes_per_full_run_x10"]:
+			_require_int(run, key, "progression.run", 1)
+		for key in ["heal_between_rooms_bp", "shrine_heal_bp", "free_rerolls", "tail_atk_bp"]:
+			_require_int(run, key, "progression.run", 0)
+		if _is_int(run.get("elite_room")) and _is_int(run.get("rooms")) and int(run["elite_room"]) >= int(run["rooms"]):
+			_err("progression.run.elite_room: must be before the boss room")
+		var doors: Variant = run.get("door_weights")
+		if not doors is Dictionary:
+			_err("progression.run.door_weights: missing")
+		else:
+			for kind: Variant in doors:
+				if not ContentSchema.DOOR_KINDS.has(kind):
+					_err("progression.run.door_weights: unknown door '%s'" % str(kind))
+				_require_int(doors, str(kind), "progression.run.door_weights", 0)
+		var rw: Variant = run.get("relic_rarity_weights")
+		if not rw is Dictionary:
+			_err("progression.run.relic_rarity_weights: missing")
+		else:
+			for r: Variant in rw:
+				if not ContentSchema.RARITIES.has(r):
+					_err("progression.run.relic_rarity_weights: unknown rarity '%s'" % str(r))
+	var rewards: Variant = p.get("rewards")
+	if not rewards is Dictionary:
+		_err("progression.rewards: missing")
+	else:
+		for key in ["gold_per_room", "gold_growth_bp", "elite_gold_bp", "boss_gold_bp", "replay_gold_bp",
+				"first_clear_bonus_bp", "first_clear_gems", "shards_per_room", "shards_win_bonus",
+				"shards_chapter_bonus_bp", "event_gold_rooms", "relic_discovery_gems", "resonance_discovery_gems"]:
+			_require_int(rewards, key, "progression.rewards", 0)
+	var offline: Variant = p.get("offline")
+	if not offline is Dictionary:
+		_err("progression.offline: missing")
+	else:
+		_require_int(offline, "farm_rate_bp", "progression.offline", 0)
+		_require_int(offline, "cap_minutes", "progression.offline", 1)
+	var power: Variant = p.get("power")
+	if not power is Dictionary:
+		_err("progression.power: missing")
+	else:
+		_require_int(power, "chapter_growth_bp", "progression.power", 10000)
+
+
+func _validate_gear(g: Variant) -> void:
+	if not g is Dictionary:
+		_err("gear: must be an object")
+		return
+	var slots: Variant = g.get("slots")
+	if not slots is Array or (slots as Array).is_empty():
+		_err("gear.slots: must be a non-empty list")
+		slots = []
+	var rarities: Variant = g.get("rarities")
+	if not rarities is Array or (rarities as Array).is_empty():
+		_err("gear.rarities: must be a non-empty list")
+	else:
+		for r: Variant in rarities:
+			if not r is Dictionary or not _is_id(r.get("id")):
+				_err("gear.rarities: each entry needs an id")
+				continue
+			var path := "gear.rarities[%s]" % r["id"]
+			_require_int(r, "stat_mult_bp", path, 1)
+			_require_int(r, "max_enhance", path, 0)
+			_require_int(r, "drop_weight", path, 0)
+	_require_int(g, "enhance_per_level_bp", "gear", 0)
+	_require_int(g, "merge_count", "gear", 2)
+	_validate_cost(g.get("enhance_cost"), "gear.enhance_cost")
+	var drops: Variant = g.get("drops")
+	if not drops is Dictionary:
+		_err("gear.drops: missing")
+	else:
+		_require_int(drops, "boss_chance_bp", "gear.drops", 0)
+		_require_int(drops, "elite_chance_bp", "gear.drops", 0)
+	var items: Variant = g.get("items")
+	if not items is Array or (items as Array).is_empty():
+		_err("gear.items: must be a non-empty list")
+		return
+	var ids: PackedStringArray = []
+	for item: Variant in items:
+		if not item is Dictionary or not _is_id(item.get("id")):
+			_err("gear.items: each item needs a lower_snake_case id")
+			continue
+		var path := "gear.items[%s]" % item["id"]
+		if ids.has(item["id"]):
+			_err("%s: duplicate id" % path)
+		ids.append(item["id"])
+		if not (slots as Array).has(item.get("slot")):
+			_err("%s.slot: unknown slot '%s'" % [path, str(item.get("slot"))])
+		var stats: Variant = item.get("stats")
+		if not stats is Dictionary or (stats as Dictionary).is_empty():
+			_err("%s.stats: must be a non-empty object" % path)
+		else:
+			for key: Variant in stats:
+				if not ContentSchema.GEAR_STATS.has(key):
+					_err("%s.stats: unknown stat '%s'" % [path, str(key)])
+				_require_int(stats, str(key), path + ".stats", 1)
+
+
+func _validate_chapters(c: Variant, data: Dictionary) -> void:
+	if not c is Dictionary:
+		_err("chapters: must be an object")
+		return
+	var enemy_roles := {}
+	if data.get("enemies") is Array:
+		for e: Variant in data["enemies"]:
+			if e is Dictionary:
+				enemy_roles[e.get("id")] = e.get("role")
+	var sizes: Variant = c.get("group_sizes")
+	if not sizes is Array:
+		_err("chapters.group_sizes: must be a list of [min, max] per room")
+	else:
+		var rooms := 0
+		if data.get("progression") is Dictionary and (data["progression"] as Dictionary).get("run") is Dictionary:
+			rooms = int(data["progression"]["run"].get("rooms", 0))
+		if rooms > 0 and (sizes as Array).size() != rooms:
+			_err("chapters.group_sizes: needs one entry per room (%d)" % rooms)
+		for pair: Variant in sizes:
+			if not pair is Array or (pair as Array).size() != 2 or not _is_int(pair[0]) or not _is_int(pair[1]) \
+					or int(pair[0]) < 1 or int(pair[1]) < int(pair[0]):
+				_err("chapters.group_sizes: each entry must be [min, max] with 1 <= min <= max")
+	var list: Variant = c.get("chapters")
+	if not list is Array or (list as Array).is_empty():
+		_err("chapters.chapters: must be a non-empty list")
+		return
+	for i in (list as Array).size():
+		var ch: Variant = list[i]
+		if not ch is Dictionary:
+			_err("chapters.chapters[%d]: must be an object" % i)
+			continue
+		var path := "chapters[%s]" % str(ch.get("id", i))
+		if not _is_id(ch.get("id")):
+			_err("%s.id: must be a lower_snake_case string" % path)
+		if not _is_int(ch.get("number")) or int(ch["number"]) != i + 1:
+			_err("%s.number: chapters must be numbered 1, 2, 3... in order" % path)
+		var normals: Variant = ch.get("normals")
+		if not normals is Array or (normals as Array).is_empty():
+			_err("%s.normals: must be a non-empty list" % path)
+		else:
+			for n: Variant in normals:
+				if enemy_roles.get(n) != "normal":
+					_err("%s.normals: '%s' is not a normal enemy" % [path, str(n)])
+		if enemy_roles.get(ch.get("elite")) != "elite":
+			_err("%s.elite: '%s' is not an elite enemy" % [path, str(ch.get("elite"))])
+		if enemy_roles.get(ch.get("boss")) != "boss":
+			_err("%s.boss: '%s' is not a boss enemy" % [path, str(ch.get("boss"))])
+
+
+func _validate_event(ev: Dictionary, path: String) -> void:
+	var options: Variant = ev.get("options")
+	if not options is Array or (options as Array).is_empty():
+		_err("%s.options: must be a non-empty list" % path)
+		return
+	for i in (options as Array).size():
+		var opt: Variant = options[i]
+		var p := "%s.options[%d]" % [path, i]
+		if not opt is Dictionary or not _is_id(opt.get("id")):
+			_err("%s: needs a lower_snake_case id" % p)
+			continue
+		var outcomes: Variant = opt.get("outcomes")
+		if not outcomes is Array:
+			_err("%s.outcomes: must be a list" % p)
+			continue
+		for o: Variant in outcomes:
+			if not o is Dictionary or not ContentSchema.EVENT_OUTCOMES.has(o.get("type")):
+				_err("%s.outcomes: unknown outcome '%s'" % [p, str(o.get("type") if o is Dictionary else o)])
+				continue
+			_require_int(o, "value", p, 0)
 
 
 func _validate_list(data: Dictionary, key: String, check: Callable) -> PackedStringArray:

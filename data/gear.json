@@ -1,0 +1,20 @@
+{
+  "slots": ["weapon", "charm", "robe"],
+  "rarities": [
+    { "id": "common", "stat_mult_bp": 10000, "max_enhance": 10, "drop_weight": 80 },
+    { "id": "rare", "stat_mult_bp": 18000, "max_enhance": 20, "drop_weight": 18 },
+    { "id": "epic", "stat_mult_bp": 32000, "max_enhance": 30, "drop_weight": 2 }
+  ],
+  "enhance_per_level_bp": 600,
+  "enhance_cost": { "base": 40, "growth_bp": 11400 },
+  "merge_count": 3,
+  "drops": { "boss_chance_bp": 3500, "elite_chance_bp": 1500, "first_clear_guaranteed": true },
+  "items": [
+    { "id": "fox_fang_blade", "name_key": "GEAR_FOX_FANG_BLADE", "slot": "weapon", "stats": { "atk_pct_bp": 1000 } },
+    { "id": "ember_fan", "name_key": "GEAR_EMBER_FAN", "slot": "weapon", "stats": { "atk_pct_bp": 800, "crit_dmg_bp": 1000 } },
+    { "id": "lucky_charm", "name_key": "GEAR_LUCKY_CHARM", "slot": "charm", "stats": { "crit_bp": 300 } },
+    { "id": "swift_bell", "name_key": "GEAR_SWIFT_BELL", "slot": "charm", "stats": { "aps_bonus_bp": 500 } },
+    { "id": "spirit_robe", "name_key": "GEAR_SPIRIT_ROBE", "slot": "robe", "stats": { "hp_pct_bp": 1000 } },
+    { "id": "warding_robe", "name_key": "GEAR_WARDING_ROBE", "slot": "robe", "stats": { "hp_pct_bp": 600, "armor_bp": 400 } }
+  ]
+}

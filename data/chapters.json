@@ -1,0 +1,10 @@
+{
+  "group_sizes": [[1, 1], [1, 1], [1, 2], [1, 2], [1, 1], [1, 2], [2, 3], [2, 3], [2, 3], [1, 1]],
+  "chapters": [
+    { "id": "ch1", "number": 1, "biome": "lantern_ruins", "name_key": "CHAPTER_1", "normals": ["moss_slime", "ember_imp", "lantern_wisp"], "elite": "ruin_brute", "boss": "gatekeeper_golem" },
+    { "id": "ch2", "number": 2, "biome": "lantern_ruins", "name_key": "CHAPTER_2", "normals": ["moss_slime", "ember_imp", "stone_sentinel", "lantern_wisp"], "elite": "ruin_brute", "boss": "gatekeeper_golem" },
+    { "id": "ch3", "number": 3, "biome": "lantern_ruins", "name_key": "CHAPTER_3", "normals": ["moss_slime", "ember_imp", "stone_sentinel", "lantern_wisp"], "elite": "ruin_brute", "boss": "gatekeeper_golem" },
+    { "id": "ch4", "number": 4, "biome": "lantern_ruins", "name_key": "CHAPTER_4", "normals": ["ember_imp", "stone_sentinel", "lantern_wisp"], "elite": "ruin_brute", "boss": "gatekeeper_golem" },
+    { "id": "ch5", "number": 5, "biome": "lantern_ruins", "name_key": "CHAPTER_5", "normals": ["moss_slime", "ember_imp", "stone_sentinel", "lantern_wisp"], "elite": "ruin_brute", "boss": "gatekeeper_golem" }
+  ]
+}

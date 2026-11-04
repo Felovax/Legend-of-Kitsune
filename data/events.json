@@ -1,0 +1,28 @@
+{
+  "events": [
+    {
+      "id": "wishing_well",
+      "name_key": "EVENT_WISHING_WELL",
+      "options": [
+        { "id": "toss_coin", "text_key": "EVENT_WISHING_WELL_TOSS", "outcomes": [ { "type": "gold_rooms", "value": 3 } ] },
+        { "id": "drink", "text_key": "EVENT_WISHING_WELL_DRINK", "outcomes": [ { "type": "heal_bp", "value": 4000 } ] }
+      ]
+    },
+    {
+      "id": "cursed_altar",
+      "name_key": "EVENT_CURSED_ALTAR",
+      "options": [
+        { "id": "accept", "text_key": "EVENT_CURSED_ALTAR_ACCEPT", "outcomes": [ { "type": "hp_cost_bp", "value": 2000 }, { "type": "upgrade_random_relic", "value": 1 } ] },
+        { "id": "leave", "text_key": "EVENT_CURSED_ALTAR_LEAVE", "outcomes": [] }
+      ]
+    },
+    {
+      "id": "lost_traveler",
+      "name_key": "EVENT_LOST_TRAVELER",
+      "options": [
+        { "id": "help", "text_key": "EVENT_LOST_TRAVELER_HELP", "outcomes": [ { "type": "shards", "value": 10 } ] },
+        { "id": "trade", "text_key": "EVENT_LOST_TRAVELER_TRADE", "outcomes": [ { "type": "random_relic", "value": 1 } ] }
+      ]
+    }
+  ]
+}

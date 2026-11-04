@@ -4,7 +4,13 @@ extends RefCounted
 ## Integral JSON numbers are converted to int so game logic stays in integer math.
 
 const DATA_DIR := "res://data"
+## Combat content: always required.
 const FILES: PackedStringArray = ["balance", "heroes", "enemies", "relics", "resonances"]
+## Meta-game content: validated when present (the game needs all of them;
+## combat-only fixtures may omit them).
+const META_FILES: PackedStringArray = ["progression", "gear", "chapters", "events"]
+## Files whose top level is the object itself (others wrap a list under their name).
+const WHOLE_FILES: PackedStringArray = ["balance", "progression", "gear", "chapters"]
 
 var balance: Dictionary = {}
 var heroes: Dictionary = {}
@@ -13,31 +19,51 @@ var relics: Dictionary = {}
 var resonances: Dictionary = {}
 ## Resonance ids in file order, so activation order is stable.
 var resonance_order: PackedStringArray = []
+## Relic ids sorted, for stable draft pools.
+var relic_order: PackedStringArray = []
+
+var progression: Dictionary = {}
+var gear: Dictionary = {}
+var gear_items: Dictionary = {}
+var gear_rarities: Dictionary = {}
+var gear_rarity_order: PackedStringArray = []
+## chapter number (int) -> chapter definition
+var chapters: Dictionary = {}
+var group_sizes: Array = []
+var events: Dictionary = {}
+var event_order: PackedStringArray = []
+
 var errors: PackedStringArray = []
 
 
 static func load_from_dir(dir: String = DATA_DIR) -> ContentDB:
 	var data := {}
 	var load_errors: PackedStringArray = []
-	for name in FILES:
+	for name in FILES + META_FILES:
 		var path := dir.path_join(name + ".json")
-		var text := FileAccess.get_file_as_string(path)
-		if text.is_empty():
-			load_errors.append("%s: missing or empty" % path)
+		if not FileAccess.file_exists(path):
+			if FILES.has(name):
+				load_errors.append("%s: missing" % path)
 			continue
+		var text := FileAccess.get_file_as_string(path)
 		var json := JSON.new()
-		if json.parse(text) != OK:
+		if text.is_empty() or json.parse(text) != OK:
 			load_errors.append("%s:%d: %s" % [path, json.get_error_line(), json.get_error_message()])
 			continue
 		var parsed: Variant = json.data
-		if name == "balance":
-			data["balance"] = parsed
+		if WHOLE_FILES.has(name):
+			data[name] = parsed
 		elif parsed is Dictionary:
 			data[name] = (parsed as Dictionary).get(name, null)
 	var db := from_data(data)
 	load_errors.append_array(db.errors)
 	db.errors = load_errors
 	return db
+
+
+## True when every meta-game file was present and loaded.
+func has_meta_content() -> bool:
+	return not progression.is_empty() and not gear.is_empty() and not chapters.is_empty() and not events.is_empty()
 
 
 ## Builds a database from already-parsed data:
@@ -58,7 +84,44 @@ static func from_data(raw: Dictionary) -> ContentDB:
 	for r: Dictionary in data["resonances"]:
 		db.resonances[r["id"]] = r
 		db.resonance_order.append(r["id"])
+	db.relic_order = PackedStringArray(db.relics.keys())
+	db.relic_order.sort()
+	if data.get("progression") is Dictionary:
+		db.progression = data["progression"]
+	if data.get("gear") is Dictionary:
+		db.gear = data["gear"]
+		for item: Dictionary in db.gear["items"]:
+			db.gear_items[item["id"]] = item
+		for rarity: Dictionary in db.gear["rarities"]:
+			db.gear_rarities[rarity["id"]] = rarity
+			db.gear_rarity_order.append(rarity["id"])
+	if data.get("chapters") is Dictionary:
+		db.group_sizes = data["chapters"]["group_sizes"]
+		for ch: Dictionary in data["chapters"]["chapters"]:
+			db.chapters[int(ch["number"])] = ch
+	if data.get("events") is Array:
+		for ev: Dictionary in data["events"]:
+			db.events[ev["id"]] = ev
+			db.event_order.append(ev["id"])
 	return db
+
+
+## Chapter definition; numbers beyond the last defined chapter reuse the last
+## one (stats still scale by number), so simulations can probe deep chapters.
+func chapter_def(number: int) -> Dictionary:
+	if chapters.has(number):
+		return chapters[number]
+	var last := 0
+	for n: int in chapters:
+		last = maxi(last, n)
+	return chapters.get(last, {})
+
+
+func max_chapter() -> int:
+	var last := 0
+	for n: int in chapters:
+		last = maxi(last, n)
+	return last
 
 
 func is_valid() -> bool:

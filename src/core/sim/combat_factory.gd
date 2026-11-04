@@ -17,8 +17,9 @@ func _init(content: ContentDB) -> void:
 
 ## relic_levels: ordered {relic_id: level}. stats_override replaces base stats
 ## (used by permanent progression). current_hp < 0 means full health.
+## attunement_bp: {relic_id: extra potency in bp} from permanent attunement.
 func make_hero(hero_id: String, relic_levels: Dictionary = {}, stats_override: Dictionary = {},
-		current_hp: int = -1) -> Combatant:
+		current_hp: int = -1, attunement_bp: Dictionary = {}) -> Combatant:
 	var def: Dictionary = db.heroes[hero_id]
 	var stats: Dictionary = (def["stats"] as Dictionary).duplicate()
 	stats.merge(stats_override, true)
@@ -35,6 +36,7 @@ func make_hero(hero_id: String, relic_levels: Dictionary = {}, stats_override: D
 			continue
 		relic_ids.append(relic_id)
 		var potency := 10000 + (maxi(1, int(relic_levels[relic_id])) - 1) * cfg.relic_level_bonus_bp
+		potency = Fx.bp(potency, 10000 + int(attunement_bp.get(relic_id, 0)))
 		for raw: Dictionary in db.relics[relic_id]["effects"]:
 			c.effects.append(compile_effect(raw, potency, relic_id, "relic", c.effects.size()))
 	c.resonances = db.active_resonances(relic_ids)

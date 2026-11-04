@@ -1,0 +1,400 @@
+class_name Expedition
+extends RefCounted
+## One delve: rooms of doors, fights, relic drafts and events, ending at the
+## boss or at the hero's defeat. Deterministic for a profile snapshot + seed.
+##
+## UI flow by phase:
+##   DOOR     -> doors, choose_door(i)       (fixed rooms offer a single door)
+##   BATTLE   -> fight() returns the BattleResult to replay
+##   DRAFT    -> draft_offer, pick_relic(i) / reroll() / skip_draft()
+##   EVENT    -> event_id, choose_event_option(i)
+##   FINISHED -> result(), then Progression.apply_run_result()
+
+enum Phase { DOOR, BATTLE, DRAFT, EVENT, FINISHED }
+
+const STREAM_DOORS := 1
+const STREAM_ENCOUNTERS := 2
+const STREAM_DRAFT := 3
+const STREAM_EVENTS := 4
+const STREAM_LOOT := 5
+const STREAM_BATTLE := 100
+
+var db: ContentDB
+var prog: Progression
+var factory: CombatFactory
+var run_cfg: Dictionary
+var chapter: int
+var chapter_def: Dictionary
+var run_id: String
+var run_seed: int
+var first_clear: bool
+
+var phase: int = Phase.DOOR
+var room: int = 0
+var rooms: int
+var hero_id: String
+var base_stats: Dictionary
+var attunement_bp: Dictionary = {}
+var hero_max_hp: int
+var hero_hp: int
+## Ordered relic id -> in-run level
+var relics: Dictionary = {}
+var rerolls_left: int
+## Door kinds offered in the current room.
+var doors: PackedStringArray = []
+var room_kind: String = ""
+## Each offer: {relic, level, upgrade: bool, completes: PackedStringArray}
+var draft_offer: Array[Dictionary] = []
+var event_id: String = ""
+var last_battle: BattleResult = null
+## Run-level story for the UI and analytics.
+var history: Array[Dictionary] = []
+
+var _result := RunResult.new()
+var _rng_doors: Rng32
+var _rng_encounters: Rng32
+var _rng_draft: Rng32
+var _rng_events: Rng32
+var _rng_loot: Rng32
+
+
+## Starts a new expedition and consumes one run number from the profile.
+static func start(content: ContentDB, profile: PlayerProfile, chapter_number: int) -> Expedition:
+	var counter := profile.run_counter
+	profile.run_counter += 1
+	return Expedition.new(content, profile, chapter_number, Rng32.derive_seed(profile.seed_base, counter), "r%d" % counter)
+
+
+func _init(content: ContentDB, profile: PlayerProfile, chapter_number: int, seed_value: int, id: String) -> void:
+	db = content
+	prog = Progression.new(db)
+	factory = CombatFactory.new(db)
+	run_cfg = db.progression["run"]
+	chapter = maxi(1, chapter_number)
+	chapter_def = db.chapter_def(chapter)
+	run_id = id
+	run_seed = seed_value
+	rooms = int(run_cfg["rooms"])
+	first_clear = chapter > profile.best_chapter
+	hero_id = profile.hero_id
+	base_stats = prog.hero_stats(profile)
+	hero_max_hp = int(base_stats["hp"])
+	hero_hp = hero_max_hp
+	rerolls_left = int(run_cfg["free_rerolls"])
+	for relic_id in db.relic_order:
+		var bonus := prog.attunement_bonus_bp(profile, relic_id)
+		if bonus > 0:
+			attunement_bp[relic_id] = bonus
+	_rng_doors = Rng32.new(Rng32.derive_seed(run_seed, STREAM_DOORS))
+	_rng_encounters = Rng32.new(Rng32.derive_seed(run_seed, STREAM_ENCOUNTERS))
+	_rng_draft = Rng32.new(Rng32.derive_seed(run_seed, STREAM_DRAFT))
+	_rng_events = Rng32.new(Rng32.derive_seed(run_seed, STREAM_EVENTS))
+	_rng_loot = Rng32.new(Rng32.derive_seed(run_seed, STREAM_LOOT))
+	_result.run_id = run_id
+	_result.chapter = chapter
+	_result.first_clear = first_clear
+	if profile.echo_relic != "" and db.relics.has(profile.echo_relic):
+		relics[profile.echo_relic] = 1
+		_result.echo_used = profile.echo_relic
+		history.append({"type": "echo", "relic": profile.echo_relic})
+	_enter_room(1)
+
+
+# --- player actions ----------------------------------------------------------------
+
+func choose_door(index: int) -> String:
+	if phase != Phase.DOOR or index < 0 or index >= doors.size():
+		return Progression.ERR_UNKNOWN
+	room_kind = doors[index]
+	history.append({"type": "door", "room": room, "kind": room_kind})
+	match room_kind:
+		"fight", "elite", "boss":
+			phase = Phase.BATTLE
+		"shrine":
+			_heal(int(run_cfg["shrine_heal_bp"]))
+			_advance()
+		"treasure":
+			_open_draft()
+		"event":
+			event_id = db.event_order[_rng_events.next_below(db.event_order.size())]
+			phase = Phase.EVENT
+	return Progression.OK
+
+
+func fight() -> BattleResult:
+	if phase != Phase.BATTLE:
+		return null
+	var hero := factory.make_hero(hero_id, relics, _stats_with_tails(), hero_hp, attunement_bp)
+	var sim := BattleSim.new(factory.cfg, Rng32.derive_seed(run_seed, STREAM_BATTLE + room))
+	sim.add_unit(hero)
+	for enemy_id in _encounter():
+		sim.add_unit(factory.make_enemy(enemy_id, chapter, room))
+	var battle := sim.run()
+	last_battle = battle
+	_result.battles += 1
+	_result.battle_ticks += battle.ticks
+	hero_hp = battle.hero_hp
+	history.append({"type": "battle", "room": room, "kind": room_kind, "outcome": battle.outcome, "ticks": battle.ticks})
+	if not battle.hero_won():
+		_finish(false)
+		return battle
+	_result.rooms_cleared = room
+	_result.gold += prog.room_gold(chapter, room_kind, not first_clear)
+	_result.shards += prog.shards_per_room(chapter)
+	_roll_loot()
+	if room_kind == "boss":
+		var rewards: Dictionary = db.progression["rewards"]
+		if first_clear:
+			_result.gold += Fx.bp(prog.room_gold(chapter, "boss", false), int(rewards["first_clear_bonus_bp"]))
+		_result.shards += int(rewards["shards_win_bonus"])
+		_finish(true)
+		return battle
+	_heal(int(run_cfg["heal_between_rooms_bp"]))
+	_open_draft()
+	return battle
+
+
+func pick_relic(index: int) -> String:
+	if phase != Phase.DRAFT or index < 0 or index >= draft_offer.size():
+		return Progression.ERR_UNKNOWN
+	var relic_id: String = draft_offer[index]["relic"]
+	_add_relic(relic_id, 1)
+	history.append({"type": "pick", "room": room, "relic": relic_id, "level": relics[relic_id]})
+	draft_offer.clear()
+	_advance()
+	return Progression.OK
+
+
+func reroll() -> String:
+	if phase != Phase.DRAFT:
+		return Progression.ERR_UNKNOWN
+	if rerolls_left <= 0:
+		return Progression.ERR_FUNDS
+	rerolls_left -= 1
+	draft_offer = _make_offer()
+	return Progression.OK
+
+
+func skip_draft() -> String:
+	if phase != Phase.DRAFT:
+		return Progression.ERR_UNKNOWN
+	draft_offer.clear()
+	_advance()
+	return Progression.OK
+
+
+func choose_event_option(index: int) -> String:
+	if phase != Phase.EVENT:
+		return Progression.ERR_UNKNOWN
+	var options: Array = db.events[event_id]["options"]
+	if index < 0 or index >= options.size():
+		return Progression.ERR_UNKNOWN
+	var option: Dictionary = options[index]
+	for outcome: Dictionary in option["outcomes"]:
+		var value := int(outcome["value"])
+		match outcome["type"]:
+			"gold_rooms":
+				_result.gold += prog.room_gold(chapter, "fight", not first_clear) * value
+			"heal_bp":
+				_heal(value)
+			"hp_cost_bp":
+				hero_hp = maxi(1, hero_hp - Fx.bp(hero_max_hp, value))
+			"shards":
+				_result.shards += value
+			"upgrade_random_relic":
+				if not relics.is_empty():
+					var keys: Array = relics.keys()
+					_add_relic(keys[_rng_events.next_below(keys.size())], value)
+			"random_relic":
+				_add_relic(_weighted_relic(_rng_events, []), value)
+	history.append({"type": "event", "room": room, "event": event_id, "option": option["id"]})
+	event_id = ""
+	_advance()
+	return Progression.OK
+
+
+## Leaves the expedition early; counts as a defeat (rewards so far are kept).
+func abandon() -> void:
+	if phase != Phase.FINISHED:
+		_finish(false)
+
+
+# --- queries -------------------------------------------------------------------------
+
+func active_resonances() -> PackedStringArray:
+	return db.active_resonances(PackedStringArray(relics.keys()))
+
+
+func tails() -> int:
+	return mini(int(run_cfg["max_tails"]), active_resonances().size())
+
+
+func is_finished() -> bool:
+	return phase == Phase.FINISHED
+
+
+func result() -> RunResult:
+	return _result
+
+
+# --- internals -----------------------------------------------------------------------
+
+func _enter_room(number: int) -> void:
+	room = number
+	room_kind = ""
+	doors = _make_doors(number)
+	phase = Phase.DOOR
+	history.append({"type": "room", "room": room, "doors": Array(doors)})
+
+
+func _advance() -> void:
+	if room >= rooms:
+		_finish(false)
+		return
+	_enter_room(room + 1)
+
+
+func _make_doors(number: int) -> PackedStringArray:
+	if number == 1:
+		return PackedStringArray(["fight"])
+	if number == int(run_cfg["elite_room"]):
+		return PackedStringArray(["elite"])
+	if number == rooms:
+		return PackedStringArray(["boss"])
+	var weights: Dictionary = run_cfg["door_weights"]
+	var first := _weighted_key(weights, _rng_doors)
+	var second := first
+	for i in 20:
+		second = _weighted_key(weights, _rng_doors)
+		if second != first:
+			break
+	if second == first:
+		second = "shrine" if first == "fight" else "fight"
+	return PackedStringArray([first, second])
+
+
+func _encounter() -> PackedStringArray:
+	match room_kind:
+		"boss":
+			return PackedStringArray([chapter_def["boss"]])
+		"elite":
+			return PackedStringArray([chapter_def["elite"]])
+	var pair: Array = db.group_sizes[mini(room, db.group_sizes.size()) - 1]
+	var count := _rng_encounters.range_int(int(pair[0]), int(pair[1]))
+	var pool: Array = chapter_def["normals"]
+	var out: PackedStringArray = []
+	for i in count:
+		out.append(pool[_rng_encounters.next_below(pool.size())])
+	return out
+
+
+func _open_draft() -> void:
+	draft_offer = _make_offer()
+	phase = Phase.DRAFT
+
+
+func _make_offer() -> Array[Dictionary]:
+	var offer: Array[Dictionary] = []
+	var taken: PackedStringArray = []
+	var size := mini(int(run_cfg["draft_size"]), db.relic_order.size())
+	while offer.size() < size:
+		var relic_id := _weighted_relic(_rng_draft, taken)
+		if relic_id.is_empty():
+			break
+		taken.append(relic_id)
+		var with_it := PackedStringArray(relics.keys())
+		if not with_it.has(relic_id):
+			with_it.append(relic_id)
+		var completes: PackedStringArray = []
+		var now := active_resonances()
+		for res_id in db.active_resonances(with_it):
+			if not now.has(res_id):
+				completes.append(res_id)
+		offer.append({"relic": relic_id, "level": int(relics.get(relic_id, 0)) + 1,
+			"upgrade": relics.has(relic_id), "completes": completes})
+	return offer
+
+
+func _weighted_relic(rng: Rng32, exclude: PackedStringArray) -> String:
+	var weights: Dictionary = run_cfg["relic_rarity_weights"]
+	var total := 0
+	for relic_id in db.relic_order:
+		if not exclude.has(relic_id):
+			total += int(weights.get(db.relics[relic_id]["rarity"], 0))
+	if total <= 0:
+		return ""
+	var roll := rng.next_below(total)
+	for relic_id in db.relic_order:
+		if exclude.has(relic_id):
+			continue
+		roll -= int(weights.get(db.relics[relic_id]["rarity"], 0))
+		if roll < 0:
+			return relic_id
+	return ""
+
+
+static func _weighted_key(weights: Dictionary, rng: Rng32) -> String:
+	var keys: Array = weights.keys()
+	keys.sort()
+	var total := 0
+	for k: String in keys:
+		total += int(weights[k])
+	var roll := rng.next_below(maxi(1, total))
+	for k: String in keys:
+		roll -= int(weights[k])
+		if roll < 0:
+			return k
+	return keys[0]
+
+
+func _add_relic(relic_id: String, levels: int) -> void:
+	if relic_id.is_empty() or not db.relics.has(relic_id):
+		return
+	var before := active_resonances()
+	relics[relic_id] = int(relics.get(relic_id, 0)) + levels
+	if not _result.relics_picked.has(relic_id):
+		_result.relics_picked.append(relic_id)
+	for res_id in active_resonances():
+		if not before.has(res_id):
+			history.append({"type": "resonance", "room": room, "resonance": res_id, "tails": tails()})
+			if not _result.resonances.has(res_id):
+				_result.resonances.append(res_id)
+	_result.max_tails = maxi(_result.max_tails, tails())
+
+
+func _stats_with_tails() -> Dictionary:
+	var stats := base_stats.duplicate()
+	stats["atk"] = Fx.bp(int(stats["atk"]), 10000 + tails() * int(run_cfg["tail_atk_bp"]))
+	return stats
+
+
+func _heal(amount_bp: int) -> void:
+	hero_hp = mini(hero_max_hp, hero_hp + Fx.bp(hero_max_hp, amount_bp))
+
+
+func _roll_loot() -> void:
+	var drops: Dictionary = db.gear["drops"]
+	var chance := 0
+	if room_kind == "elite":
+		chance = int(drops["elite_chance_bp"])
+	elif room_kind == "boss":
+		chance = 10000 if first_clear and drops.get("first_clear_guaranteed", false) else int(drops["boss_chance_bp"])
+	if chance <= 0 or not _rng_loot.chance_bp(chance):
+		return
+	var weights := {}
+	for r in db.gear_rarity_order:
+		weights[r] = int(db.gear_rarities[r]["drop_weight"])
+	var rarity := _weighted_key(weights, _rng_loot)
+	var items: Array = db.gear_items.keys()
+	items.sort()
+	_result.gear_drops.append({"item": items[_rng_loot.next_below(items.size())], "rarity": rarity})
+
+
+func _finish(won: bool) -> void:
+	phase = Phase.FINISHED
+	_result.won = won
+	if not won:
+		_result.death_room = room
+	_result.relics = relics.duplicate()
+	_result.hero_hp_end = hero_hp
+	history.append({"type": "finished", "won": won, "room": room})

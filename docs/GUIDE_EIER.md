@@ -19,6 +19,26 @@ Du trenger: en Android-telefon og at du er logget inn på GitHub i nettleseren.
 9. Åpne **Legend of Kitsune** og spill noen ekspedisjoner.
 10. Fortell Claude hvordan det føltes (se punkt 4).
 
+### Testverktøy i testversjonen
+
+Testversjonen har et eget panel nederst under **Settings** → **Test tools (debug build only)**. Det finnes ikke i versjonen som skal i butikkene.
+
+- **+10K gold / +1K gems / +500 shards:** gir deg ressurser, så du kan prøve oppgraderinger og butikken uten å spille lenge.
+- **Unlock next chapter:** åpner neste kapittel.
+- **Reset save:** trykk to ganger for å starte helt på nytt. Da ser du introduksjonen for nye spillere igjen.
+- **Test store: purchases fail:** når denne er på, mislykkes testkjøp, så du kan se hva som skjer da.
+- **Play log:** en kort oppsummering av spillingen din (økter, ekspedisjoner, seire, kjøp). Ta gjerne et skjermbilde av den og send til Claude. Ingenting sendes fra telefonen.
+
+Butikken er en **testbutikk**: ingen ekte penger trekkes, og det står et banner øverst i butikken.
+
+### Hva du bør prøve
+
+1. Start på nytt med **Reset save** og spill den første ekspedisjonen uten hjelp. Skjønte du hintene?
+2. Spill til du vinner kapittel 1. Gå så til **Hero** og bruk gullet.
+3. Prøv butikken: kjøp gems, **Starter Pack**, **Tail Ledger** og **Swift Paws** (gratis i testbutikken).
+4. Med Swift Paws: trykk **Auto** øverst i en ekspedisjon og prøv farten **3x** i kamp.
+5. Lukk appen midt i en ekspedisjon (sveip den bort) og åpne igjen. Ekspedisjonen skal fortsette der du var.
+
 **Nye versjoner:** gjenta steg 1–8. Den nye versjonen installeres over den gamle, og framgangen din beholdes.
 Nedlastingene slettes automatisk etter 14 dager, men en ny blir laget hver gang Claude pusher kode.
 

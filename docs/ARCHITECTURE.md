@@ -14,8 +14,10 @@ src/core/              pure logic: no Nodes, no wall-clock time, no global rando
                        Progression (levels, training, attunement, gear, power, rewards, offline income)
   save/                SaveCodec (schema version + migration chain)
   shop/       (M4)     catalog, eligibility, purchase flow, idempotent grants
-src/services/          SaveService (atomic write, 2 backups, checksum); autoloads Game (GameState) and Audio
-src/platform/ (M4/M6)  store adapters: fake, Apple (godot-iap), Google (Play Billing)
+src/services/          SaveService (atomic write, 2 backups, checksum); Analytics (local play log, debug builds);
+                       autoloads Game (GameState) and Audio
+src/core/shop/         Shop rules: eligibility, idempotent grants, caches, Fox Charter, Tail Ledger
+src/platform/          store adapters: FakeStore now; Apple (godot-iap) and Google (Play Billing) in M6
 src/ui/
   app/                 App shell: backdrop, currency bar, bottom tabs, expedition takeover, toasts
   screens/             Camp, Expedition, Hero, Codex, Settings, Shop (stub)
@@ -25,7 +27,8 @@ src/ui/
 assets/                fonts (+ OFL licences), audio (generated), icon; sprites/<id>.png when AI art arrives
 localization/          strings.csv (English); UI uses English msgids via tr(), content uses keys
 tests/                 headless tests (run_tests.gd, test_case.gd, sim_test_case.gd, unit/, fixtures/)
-tools/                 test.sh, validate_content.gd, balance_sim.gd
+tools/                 test.sh, validate_content.gd, balance_sim.gd, economy_sim.gd, screenshot.gd,
+                       preview/ (screens for screenshots), audio/gen_music.py (placeholder music)
 docs/                  design, economy, decisions, roadmap, art prompts
 ```
 
@@ -70,7 +73,7 @@ Adding a relic means adding JSON only. A new trigger, action, status or stat mea
 - A newer schema is refused. Older schemas run through `SaveCodec.steps()` (one tested step per version).
 
 ### 7. UI layer (M3)
-- `Game` (autoload, `src/services/game_state.gd`) owns the profile at runtime: `boot()`, `save()`, offline claim on resume, expedition start/finish, upgrade wrappers that save and emit `profile_changed`. Screens never change the profile directly.
+- `Game` (autoload, `src/services/game_state.gd`) owns the profile at runtime: `boot()`, `save()`, offline claim on resume, expedition start/finish, upgrade wrappers that save and emit `profile_changed`. Screens never change the profile directly. It also restores an unfinished expedition at boot (`profile.active_run` = start snapshot + action log, replayed deterministically), routes store purchases from the store adapter to `Shop.grant()`, and offers debug tools only when `OS.is_debug_build()`.
 - `boot()` is called by the App scene, never in `_ready`, so tests and tools can boot it with their own save folders.
 - Screens are code-built `Control`s. Text goes through `tr()`; colours come only from `Palette`.
 - `BattleView` animates a finished `BattleResult`. Speed and skip never affect the outcome.

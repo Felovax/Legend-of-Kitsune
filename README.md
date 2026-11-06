@@ -6,7 +6,7 @@ A portrait mobile roguelite RPG for iOS and Android. A little kitsune delves int
 
 ## Status
 
-Playable prototype. M0–M3 are done: combat core, expedition, progression, economy, saves, and a complete UI with placeholder art and sound (151 tests). Next: M4 (shop, onboarding, resume after app kill).
+MVP complete in code (M0–M4): combat core, expedition, progression, economy, saves with resume after app kill, a complete UI with placeholder art and sound, a simulated shop (test store, no real money), first-run onboarding, Auto mode, and debug-build test tools (181 tests). Next: a play-test on real phones, AI art, then M5 (content and external testers).
 
 ## Tech
 

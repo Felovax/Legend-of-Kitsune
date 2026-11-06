@@ -241,3 +241,27 @@ func test_play_log_records_runs() -> void:
 	assert_eq(s["runs"], 1)
 	game.analytics.clear()
 	SaveService.new(dir).delete_all()
+
+
+func test_music_follows_setting_and_screen() -> void:
+	var audio: Node = root.get_node("Audio")
+	game.set_setting("music", true)
+	audio.play_music("camp")
+	assert_eq(audio.current_music, "camp")
+	assert_ne(audio._music.stream, null, "camp track loaded")
+	var camp_stream: AudioStream = audio._music.stream
+	assert_eq((camp_stream as AudioStreamWAV).loop_mode, AudioStreamWAV.LOOP_FORWARD, "music loops")
+	audio.play_music("delve")
+	assert_ne(audio._music.stream, camp_stream, "switched track")
+	game.set_setting("music", false)
+	assert_false(audio.is_music_playing(), "music off stops playback")
+	audio.play_music("camp")
+	assert_false(audio.is_music_playing(), "stays off")
+	assert_eq(audio.current_music, "camp", "remembers the wanted track")
+	game.set_setting("music", true)
+	assert_eq(audio._music.stream, camp_stream, "turning music on resumes the wanted track")
+	audio._music.stop()
+	audio._music.stream = null
+	audio._streams.clear()
+	audio.current_music = ""
+	SaveService.new(dir).delete_all()

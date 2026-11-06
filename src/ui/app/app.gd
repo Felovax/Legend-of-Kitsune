@@ -82,6 +82,7 @@ func show_tab(id: String) -> void:
 	if _current != null:
 		_current.queue_free()
 	_current_tab = id
+	Audio.play_music("camp")
 	match id:
 		"shop":
 			_current = ShopScreen.new()
@@ -126,6 +127,7 @@ func _open_expedition(exp: Expedition) -> void:
 	_top_bar.visible = false
 	_tab_bar.visible = false
 	_backdrop.variant = "ruins"
+	Audio.play_music("delve")
 	var screen := ExpeditionScreen.new()
 	screen.setup(exp)
 	screen.closed.connect(func() -> void: show_tab("camp"))

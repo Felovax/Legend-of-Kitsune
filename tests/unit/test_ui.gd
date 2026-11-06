@@ -128,3 +128,29 @@ func test_number_formatting() -> void:
 	assert_eq(UiKit.format_number(12345), "12.3K")
 	assert_eq(UiKit.format_number(2_500_000), "2.5M")
 	assert_eq(UiKit.format_number(999_000_000_000), "999B")
+
+
+func test_purchase_flow_through_game() -> void:
+	game.profile.best_chapter = 3
+	var results: Array = []
+	game.purchase_finished.connect(func(id: String, ok: bool, _r: String) -> void: results.append([id, ok]), CONNECT_ONE_SHOT)
+	assert_eq(game.buy_product("gems_880"), Shop.OK)
+	assert_eq(results, [["gems_880", true]])
+	assert_eq(game.profile.wallet.gems_paid, 1760, "first purchase doubled")
+	assert_eq(game.profile.transactions.size(), 1)
+	assert_eq(game.buy_offer("gold_cache"), Shop.OK)
+	assert_gt(game.profile.wallet.gold, 0)
+	game.boot(dir, dir + "/settings.cfg")
+	assert_eq(game.profile.transactions.size(), 1, "purchase was saved")
+	assert_eq(game.buy_product("starter_pack"), Shop.OK)
+	assert_ne(game.buy_product("starter_pack"), Shop.OK, "one per player")
+	SaveService.new(dir).delete_all()
+
+
+func test_shop_screen_builds_with_progress() -> void:
+	game.profile.best_chapter = 5
+	game.shop.grant(game.profile, "tail_ledger", "t-ledger", game.today())
+	game.shop.grant(game.profile, "fox_charter", "t-charter", game.today())
+	var host := _host(ShopScreen.new())
+	assert_gt(host.get_child(0).get_child_count(), 0)
+	_cleanup(host)

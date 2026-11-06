@@ -8,9 +8,9 @@ const DATA_DIR := "res://data"
 const FILES: PackedStringArray = ["balance", "heroes", "enemies", "relics", "resonances"]
 ## Meta-game content: validated when present (the game needs all of them;
 ## combat-only fixtures may omit them).
-const META_FILES: PackedStringArray = ["progression", "gear", "chapters", "events"]
+const META_FILES: PackedStringArray = ["progression", "gear", "chapters", "events", "shop"]
 ## Files whose top level is the object itself (others wrap a list under their name).
-const WHOLE_FILES: PackedStringArray = ["balance", "progression", "gear", "chapters"]
+const WHOLE_FILES: PackedStringArray = ["balance", "progression", "gear", "chapters", "shop"]
 
 var balance: Dictionary = {}
 var heroes: Dictionary = {}
@@ -32,6 +32,8 @@ var chapters: Dictionary = {}
 var group_sizes: Array = []
 var events: Dictionary = {}
 var event_order: PackedStringArray = []
+## data/shop.json (products, gem offers, charter, ledger)
+var shop: Dictionary = {}
 
 var errors: PackedStringArray = []
 
@@ -63,7 +65,8 @@ static func load_from_dir(dir: String = DATA_DIR) -> ContentDB:
 
 ## True when every meta-game file was present and loaded.
 func has_meta_content() -> bool:
-	return not progression.is_empty() and not gear.is_empty() and not chapters.is_empty() and not events.is_empty()
+	return not progression.is_empty() and not gear.is_empty() and not chapters.is_empty() and not events.is_empty() \
+		and not shop.is_empty()
 
 
 ## Builds a database from already-parsed data:
@@ -99,6 +102,8 @@ static func from_data(raw: Dictionary) -> ContentDB:
 		db.group_sizes = data["chapters"]["group_sizes"]
 		for ch: Dictionary in data["chapters"]["chapters"]:
 			db.chapters[int(ch["number"])] = ch
+	if data.get("shop") is Dictionary:
+		db.shop = data["shop"]
 	if data.get("events") is Array:
 		for ev: Dictionary in data["events"]:
 			db.events[ev["id"]] = ev

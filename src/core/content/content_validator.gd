@@ -29,6 +29,90 @@ func _validate_all(data: Dictionary) -> void:
 		_validate_chapters(data["chapters"], data)
 	if data.has("events"):
 		_validate_list(data, "events", _validate_event)
+	if data.has("shop"):
+		_validate_shop(data["shop"], data)
+
+
+func _validate_shop(shop: Variant, data: Dictionary) -> void:
+	if not shop is Dictionary:
+		_err("shop: must be an object")
+		return
+	_require_int(shop, "gems_per_usd", "shop", 1)
+	var gear_ids := {}
+	if data.get("gear") is Dictionary and data["gear"].get("items") is Array:
+		for item: Variant in data["gear"]["items"]:
+			if item is Dictionary:
+				gear_ids[item.get("id")] = true
+	var ids := {}
+	var skus := {}
+	for product: Variant in shop.get("products", []):
+		if not product is Dictionary or not _is_id(product.get("id")):
+			_err("shop.products: each product needs a lower_snake_case id")
+			continue
+		var path := "shop.products[%s]" % product["id"]
+		if ids.has(product["id"]):
+			_err("%s: duplicate id" % path)
+		ids[product["id"]] = true
+		var sku: Variant = product.get("store_sku")
+		if not sku is String or (sku as String).is_empty():
+			_err("%s.store_sku: required" % path)
+		elif skus.has(sku):
+			_err("%s.store_sku: duplicate '%s'" % [path, sku])
+		else:
+			skus[sku] = true
+		if not ContentSchema.PRODUCT_TYPES.has(product.get("type")):
+			_err("%s.type: must be one of %s" % [path, ", ".join(ContentSchema.PRODUCT_TYPES)])
+		if not ContentSchema.PRODUCT_CATEGORIES.has(product.get("category")):
+			_err("%s.category: unknown '%s'" % [path, str(product.get("category"))])
+		if not _is_number(product.get("test_price_usd")) or float(product["test_price_usd"]) <= 0.0:
+			_err("%s.test_price_usd: must be a number > 0" % path)
+		_validate_contents(product.get("contents"), ContentSchema.PRODUCT_CONTENTS, path, gear_ids)
+	for offer: Variant in shop.get("gem_offers", []):
+		if not offer is Dictionary or not _is_id(offer.get("id")):
+			_err("shop.gem_offers: each offer needs an id")
+			continue
+		var path := "shop.gem_offers[%s]" % offer["id"]
+		var prices: Variant = offer.get("gem_prices")
+		if not prices is Array or (prices as Array).is_empty():
+			_err("%s.gem_prices: must be a non-empty list" % path)
+		else:
+			for price: Variant in prices:
+				if not _is_int(price) or int(price) < 1:
+					_err("%s.gem_prices: prices must be integers >= 1" % path)
+		_validate_contents(offer.get("contents"), ContentSchema.OFFER_CONTENTS, path, gear_ids)
+	var charter: Variant = shop.get("charter")
+	if not charter is Dictionary:
+		_err("shop.charter: missing")
+	else:
+		_require_int(charter, "gems_per_day", "shop.charter", 1)
+		_require_int(charter, "max_banked_days", "shop.charter", 1)
+	var last := 0
+	for step: Variant in shop.get("ledger", []):
+		if not step is Dictionary or not _is_int(step.get("chapter")):
+			_err("shop.ledger: each step needs a chapter")
+			continue
+		if int(step["chapter"]) <= last:
+			_err("shop.ledger: chapters must increase")
+		last = int(step["chapter"])
+
+
+func _validate_contents(contents: Variant, allowed: PackedStringArray, path: String, gear_ids: Dictionary) -> void:
+	if not contents is Array or (contents as Array).is_empty():
+		_err("%s.contents: must be a non-empty list" % path)
+		return
+	for c: Variant in contents:
+		if not c is Dictionary or not allowed.has(c.get("type")):
+			_err("%s.contents: unknown content '%s'" % [path, str(c.get("type") if c is Dictionary else c)])
+			continue
+		match c["type"]:
+			"gear":
+				if not gear_ids.has(c.get("item")):
+					_err("%s.contents: unknown gear '%s'" % [path, str(c.get("item"))])
+			"entitlement":
+				if not ContentSchema.ENTITLEMENTS.has(c.get("id")):
+					_err("%s.contents: unknown entitlement '%s'" % [path, str(c.get("id"))])
+			_:
+				_require_int(c, "amount", path + ".contents", 1)
 
 
 # --- meta-game content ------------------------------------------------------

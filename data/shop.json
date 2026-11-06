@@ -1,0 +1,52 @@
+{
+  "gems_per_usd": 88,
+  "products": [
+    { "id": "gems_80", "store_sku": "lok.gems.80", "type": "consumable", "category": "gems", "name_key": "SHOP_GEMS", "test_price_usd": 0.99, "first_purchase_double": true, "contents": [ { "type": "gems", "amount": 80 } ] },
+    { "id": "gems_420", "store_sku": "lok.gems.420", "type": "consumable", "category": "gems", "name_key": "SHOP_GEMS", "test_price_usd": 4.99, "first_purchase_double": true, "contents": [ { "type": "gems", "amount": 420 } ] },
+    { "id": "gems_880", "store_sku": "lok.gems.880", "type": "consumable", "category": "gems", "name_key": "SHOP_GEMS", "test_price_usd": 9.99, "first_purchase_double": true, "contents": [ { "type": "gems", "amount": 880 } ] },
+    { "id": "gems_1800", "store_sku": "lok.gems.1800", "type": "consumable", "category": "gems", "name_key": "SHOP_GEMS", "test_price_usd": 19.99, "first_purchase_double": true, "contents": [ { "type": "gems", "amount": 1800 } ] },
+    { "id": "gems_4700", "store_sku": "lok.gems.4700", "type": "consumable", "category": "gems", "name_key": "SHOP_GEMS", "test_price_usd": 49.99, "first_purchase_double": true, "contents": [ { "type": "gems", "amount": 4700 } ] },
+    { "id": "gems_9800", "store_sku": "lok.gems.9800", "type": "consumable", "category": "gems", "name_key": "SHOP_GEMS", "test_price_usd": 99.99, "first_purchase_double": true, "contents": [ { "type": "gems", "amount": 9800 } ] },
+    {
+      "id": "starter_pack", "store_sku": "lok.starter.1", "type": "consumable", "category": "special", "name_key": "SHOP_STARTER", "test_price_usd": 4.99,
+      "eligibility": { "min_chapter_cleared": 1, "max_chapter_cleared": 9, "max_purchases": 1 },
+      "contents": [ { "type": "gems", "amount": 600 }, { "type": "gear", "item": "fox_fang_blade", "rarity": "epic" }, { "type": "shards", "amount": 200 } ]
+    },
+    {
+      "id": "tail_ledger", "store_sku": "lok.ledger.1", "type": "non_consumable", "category": "special", "name_key": "SHOP_LEDGER", "test_price_usd": 9.99,
+      "eligibility": { "min_chapter_cleared": 2, "max_purchases": 1 },
+      "contents": [ { "type": "entitlement", "id": "tail_ledger" } ]
+    },
+    {
+      "id": "fox_charter", "store_sku": "lok.charter.30", "type": "consumable", "category": "special", "name_key": "SHOP_CHARTER", "test_price_usd": 4.99,
+      "eligibility": { "min_chapter_cleared": 3, "not_while_charter_active": true },
+      "contents": [ { "type": "gems", "amount": 300 }, { "type": "charter_days", "amount": 30 } ]
+    },
+    {
+      "id": "swift_paws", "store_sku": "lok.swift.1", "type": "non_consumable", "category": "convenience", "name_key": "SHOP_SWIFT", "test_price_usd": 4.99,
+      "eligibility": { "min_chapter_cleared": 2, "max_purchases": 1 },
+      "contents": [ { "type": "entitlement", "id": "swift_paws" } ]
+    }
+  ],
+  "gem_offers": [
+    { "id": "gold_cache", "name_key": "SHOP_GOLD_CACHE", "gem_prices": [100, 150, 200, 300, 400], "contents": [ { "type": "gold_minutes", "amount": 60 } ] },
+    { "id": "shard_cache", "name_key": "SHOP_SHARD_CACHE", "gem_prices": [100, 150, 250], "contents": [ { "type": "shard_minutes", "amount": 60 } ] }
+  ],
+  "charter": { "gems_per_day": 90, "max_banked_days": 7 },
+  "ledger": [
+    { "chapter": 2, "free_gems": 20, "premium_gems": 200 },
+    { "chapter": 3, "free_gems": 20, "premium_gems": 200 },
+    { "chapter": 4, "free_gems": 20, "premium_gems": 200, "premium_shards": 100 },
+    { "chapter": 5, "free_gems": 30, "premium_gems": 250 },
+    { "chapter": 6, "free_gems": 20, "premium_gems": 250 },
+    { "chapter": 8, "free_gems": 20, "premium_gems": 250, "premium_shards": 150 },
+    { "chapter": 10, "free_gems": 40, "premium_gems": 300 },
+    { "chapter": 12, "free_gems": 20, "premium_gems": 300, "premium_shards": 150 },
+    { "chapter": 15, "free_gems": 40, "premium_gems": 350 },
+    { "chapter": 18, "free_gems": 20, "premium_gems": 350, "premium_shards": 200 },
+    { "chapter": 20, "free_gems": 50, "premium_gems": 400 },
+    { "chapter": 23, "free_gems": 20, "premium_gems": 400, "premium_shards": 200 },
+    { "chapter": 26, "free_gems": 30, "premium_gems": 450 },
+    { "chapter": 30, "free_gems": 60, "premium_gems": 550, "premium_shards": 200 }
+  ]
+}

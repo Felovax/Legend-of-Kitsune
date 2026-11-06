@@ -8,6 +8,8 @@ signal profile_changed
 signal expedition_started(expedition: Expedition)
 signal expedition_finished(result: RunResult)
 signal settings_changed
+## A store purchase finished: ok=false carries the reason.
+signal purchase_finished(product_id: String, ok: bool, reason: String)
 
 const SETTINGS_PATH := "user://settings.cfg"
 const DEFAULT_SETTINGS := {
@@ -16,6 +18,9 @@ const DEFAULT_SETTINGS := {
 
 var db: ContentDB
 var prog: Progression
+var shop: Shop
+## Store adapter. FakeStore in development; StoreKit / Play Billing adapters in M6.
+var store: FakeStore
 var profile: PlayerProfile
 var saves: SaveService
 var expedition: Expedition = null
@@ -33,6 +38,10 @@ func boot(save_dir: String = SaveService.DEFAULT_DIR, settings_path: String = SE
 		push_error("content invalid: " + " | ".join(db.errors))
 		return false
 	prog = Progression.new(db)
+	shop = Shop.new(db)
+	store = FakeStore.new(shop.products())
+	store.purchase_completed.connect(_on_purchase_completed)
+	store.purchase_failed.connect(_on_purchase_failed)
 	saves = SaveService.new(save_dir)
 	_settings_path = settings_path
 	_load_settings()
@@ -165,6 +174,49 @@ func _commit(code: String) -> String:
 		save()
 		profile_changed.emit()
 	return code
+
+
+# --- shop -----------------------------------------------------------------------------
+
+## Days since the Unix epoch (UTC), the shop's notion of "today".
+func today() -> int:
+	@warning_ignore("integer_division")
+	return now() / 86400
+
+
+## Starts a store purchase; the result arrives via purchase_finished.
+func buy_product(product_id: String) -> String:
+	var p := shop.product(product_id)
+	var reason := shop.eligibility(profile, p, today())
+	if reason != Shop.OK:
+		return reason
+	store.purchase(p["store_sku"])
+	return Shop.OK
+
+
+func buy_offer(offer_id: String) -> String:
+	return _commit(shop.buy_offer(profile, offer_id, today()))
+
+
+func claim_charter() -> String:
+	return _commit(shop.claim_charter(profile, today()))
+
+
+func claim_ledger(chapter: int, track: String) -> String:
+	return _commit(shop.claim_ledger(profile, chapter, track))
+
+
+func _on_purchase_completed(sku: String, transaction_id: String) -> void:
+	var p := shop.product_by_sku(sku)
+	var code := shop.grant(profile, p.get("id", ""), transaction_id, today())
+	if code == Shop.OK:
+		save()
+		profile_changed.emit()
+	purchase_finished.emit(p.get("id", ""), code == Shop.OK, code)
+
+
+func _on_purchase_failed(sku: String, reason: String) -> void:
+	purchase_finished.emit(shop.product_by_sku(sku).get("id", ""), false, reason)
 
 
 # --- settings ------------------------------------------------------------------------------

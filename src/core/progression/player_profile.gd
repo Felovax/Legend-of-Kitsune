@@ -40,6 +40,21 @@ var counters: Dictionary = {}
 ## resumed after the app is closed or killed. Empty when none.
 var active_run: Dictionary = {}
 
+# --- shop state ---
+## Store transactions already granted: {id, product, day}
+var transactions: Array[Dictionary] = []
+## product id -> times purchased
+var purchase_counts: Dictionary = {}
+var entitlements: PackedStringArray = []
+## Tail Ledger claims: chapter numbers per track ("free", "premium").
+var ledger_claims: Dictionary = {"free": [], "premium": []}
+## Fox Charter: active while day < charter_end_day; gems claimable per day.
+var charter_end_day: int = 0
+var charter_last_claim_day: int = 0
+## Gem offers bought today (resets when offer_day changes).
+var offer_day: int = 0
+var offer_counts: Dictionary = {}
+
 
 func gear_by_uid(uid: int) -> Dictionary:
 	for g in gear:
@@ -74,6 +89,14 @@ func to_dict() -> Dictionary:
 		"last_seen_unix": last_seen_unix,
 		"counters": counters.duplicate(),
 		"active_run": active_run.duplicate(true),
+		"transactions": transactions.duplicate(true),
+		"purchase_counts": purchase_counts.duplicate(),
+		"entitlements": Array(entitlements),
+		"ledger_claims": ledger_claims.duplicate(true),
+		"charter_end_day": charter_end_day,
+		"charter_last_claim_day": charter_last_claim_day,
+		"offer_day": offer_day,
+		"offer_counts": offer_counts.duplicate(),
 	}
 
 
@@ -104,6 +127,22 @@ static func from_dict(d: Dictionary) -> PlayerProfile:
 	p.counters = _int_values(d.get("counters", {}))
 	var run: Variant = d.get("active_run", {})
 	p.active_run = (run as Dictionary).duplicate(true) if run is Dictionary else {}
+	for t: Variant in d.get("transactions", []):
+		if t is Dictionary:
+			p.transactions.append({"id": str(t.get("id", "")), "product": str(t.get("product", "")), "day": int(t.get("day", 0))})
+	p.purchase_counts = _int_values(d.get("purchase_counts", {}))
+	p.entitlements = PackedStringArray(d.get("entitlements", []))
+	var claims: Variant = d.get("ledger_claims", {})
+	if claims is Dictionary:
+		for track in ["free", "premium"]:
+			var list: Array = []
+			for c: Variant in claims.get(track, []):
+				list.append(int(c))
+			p.ledger_claims[track] = list
+	p.charter_end_day = int(d.get("charter_end_day", 0))
+	p.charter_last_claim_day = int(d.get("charter_last_claim_day", 0))
+	p.offer_day = int(d.get("offer_day", 0))
+	p.offer_counts = _int_values(d.get("offer_counts", {}))
 	return p
 
 

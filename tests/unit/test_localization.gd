@@ -33,6 +33,12 @@ func test_content_names_and_descriptions_exist() -> void:
 		need.append(ev["name_key"] + "_DESC")
 		for o: Dictionary in ev["options"]:
 			need.append(o["text_key"])
+	for prod: Dictionary in db.shop.get("products", []):
+		need.append(prod["name_key"])
+		if prod["category"] != "gems":
+			need.append(prod["name_key"] + "_DESC")
+	for o: Dictionary in db.shop.get("gem_offers", []):
+		need.append(o["name_key"])
 	for k in need:
 		if not keys.has(k) or String(keys[k]).is_empty():
 			missing.append(k)

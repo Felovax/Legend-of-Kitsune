@@ -23,6 +23,7 @@ var shop: Shop
 var store: FakeStore
 var profile: PlayerProfile
 var saves: SaveService
+var analytics: Analytics
 var expedition: Expedition = null
 ## Offline income granted at the last boot/resume: {minutes, gold}.
 var last_offline: Dictionary = {}
@@ -43,6 +44,7 @@ func boot(save_dir: String = SaveService.DEFAULT_DIR, settings_path: String = SE
 	store.purchase_completed.connect(_on_purchase_completed)
 	store.purchase_failed.connect(_on_purchase_failed)
 	saves = SaveService.new(save_dir)
+	analytics = Analytics.new(save_dir, OS.is_debug_build())
 	_settings_path = settings_path
 	_load_settings()
 	var loaded := saves.load_profile()
@@ -58,6 +60,7 @@ func boot(save_dir: String = SaveService.DEFAULT_DIR, settings_path: String = SE
 			expedition.action_taken.connect(_on_expedition_action)
 	booted = true
 	save()
+	analytics.track("session_start", {"runs": int(profile.counters.get("runs", 0)), "best": profile.best_chapter, "level": profile.hero_level})
 	profile_changed.emit()
 	return true
 
@@ -107,6 +110,7 @@ func start_expedition(chapter: int) -> Expedition:
 	profile.active_run = expedition.to_snapshot()
 	expedition.action_taken.connect(_on_expedition_action)
 	save()
+	analytics.track("run_start", {"chapter": chapter, "tutorial": expedition.tutorial})
 	expedition_started.emit(expedition)
 	return expedition
 
@@ -130,6 +134,7 @@ func finish_expedition() -> RunResult:
 	if not expedition.is_finished():
 		expedition.abandon()
 	var result := expedition.result()
+	analytics.track("run_end", {"chapter": result.chapter, "won": result.won, "room": result.rooms_cleared, "tails": expedition.tails(), "gold": result.gold})
 	prog.apply_run_result(profile, result)
 	profile.active_run = {}
 	expedition = null
@@ -142,7 +147,10 @@ func finish_expedition() -> RunResult:
 # --- upgrades (each saves and notifies on success) -------------------------------------
 
 func level_up() -> String:
-	return _commit(prog.level_up(profile))
+	var code := _commit(prog.level_up(profile))
+	if code == Progression.OK:
+		analytics.track("level_up", {"level": profile.hero_level, "best": profile.best_chapter})
+	return code
 
 
 func train(id: String) -> String:
@@ -195,7 +203,10 @@ func buy_product(product_id: String) -> String:
 
 
 func buy_offer(offer_id: String) -> String:
-	return _commit(shop.buy_offer(profile, offer_id, today()))
+	var code := _commit(shop.buy_offer(profile, offer_id, today()))
+	if code == Shop.OK:
+		analytics.track("offer", {"id": offer_id})
+	return code
 
 
 func claim_charter() -> String:
@@ -211,12 +222,52 @@ func _on_purchase_completed(sku: String, transaction_id: String) -> void:
 	var code := shop.grant(profile, p.get("id", ""), transaction_id, today())
 	if code == Shop.OK:
 		save()
+		analytics.track("purchase", {"product": p.get("id", ""), "best": profile.best_chapter})
 		profile_changed.emit()
 	purchase_finished.emit(p.get("id", ""), code == Shop.OK, code)
 
 
 func _on_purchase_failed(sku: String, reason: String) -> void:
+	analytics.track("purchase_failed", {"product": shop.product_by_sku(sku).get("id", ""), "reason": reason})
 	purchase_finished.emit(shop.product_by_sku(sku).get("id", ""), false, reason)
+
+
+# --- debug tools (debug builds only) ---------------------------------------------------
+
+func debug_enabled() -> bool:
+	return OS.is_debug_build()
+
+
+func debug_add(currency: String, amount: int) -> void:
+	if debug_enabled():
+		profile.wallet.add(currency, amount, "debug")
+		_commit(Progression.OK)
+
+
+func debug_unlock_chapter() -> void:
+	if debug_enabled() and profile.best_chapter < db.max_chapter():
+		profile.best_chapter += 1
+		_commit(Progression.OK)
+
+
+func debug_reset() -> void:
+	if not debug_enabled():
+		return
+	saves.delete_all()
+	analytics.clear()
+	boot(saves.dir_path, _settings_path)
+
+
+## Battle speeds the player may pick: 1x and 2x for everyone, 3x with Swift Paws.
+func allowed_speeds() -> Array[int]:
+	var speeds: Array[int] = [1, 2]
+	if shop.has_entitlement(profile, "swift_paws"):
+		speeds.append(3)
+	return speeds
+
+
+func auto_mode_allowed() -> bool:
+	return shop.has_entitlement(profile, "swift_paws") or debug_enabled()
 
 
 # --- settings ------------------------------------------------------------------------------

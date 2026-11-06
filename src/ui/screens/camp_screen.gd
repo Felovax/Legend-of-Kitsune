@@ -55,6 +55,8 @@ func _build() -> void:
 	UiKit.expand(info)
 	column.add_child(UiKit.panel(UiKit.hbox([_prev, info, _next], 12)))
 
+	if int(Game.profile.counters.get("runs", 0)) == 0:
+		column.add_child(UiKit.panel(UiKit.wrap_label(tr("Tap DELVE to begin your first expedition!"), "", HORIZONTAL_ALIGNMENT_CENTER), "CardPanel"))
 	var delve := UiKit.button(tr("DELVE"), func() -> void: delve_requested.emit(_chapter), "GreenButton")
 	delve.custom_minimum_size = Vector2(0, 150)
 	delve.add_theme_font_size_override("font_size", 64)

@@ -26,6 +26,8 @@ var _tails_label: Label
 var _relic_row: HFlowContainer
 var _body: Control
 var _battle: BattleView = null
+var _auto: bool = false
+var _auto_button: Button
 
 
 func setup(exp: Expedition) -> void:
@@ -43,7 +45,12 @@ func _ready() -> void:
 	_header_title.add_theme_constant_override("outline_size", 10)
 	UiKit.expand(_header_title)
 	var retreat := UiKit.button(tr("Retreat"), _on_retreat, "GhostButton")
-	column.add_child(UiKit.hbox([_header_title, retreat]))
+	var header := UiKit.hbox([_header_title], 10)
+	if Game.auto_mode_allowed():
+		_auto_button = UiKit.button(tr("Auto"), _toggle_auto, "GhostButton")
+		header.add_child(_auto_button)
+	header.add_child(retreat)
+	column.add_child(header)
 
 	_track = UiKit.hbox([], 8)
 	_track.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -84,7 +91,47 @@ func _refresh() -> void:
 			_show_event()
 		Expedition.Phase.FINISHED:
 			_show_results()
+	_schedule_auto()
 
+
+## Onboarding hint during the first expedition, placed under a column's title.
+func _hint(column: Container, text: String) -> void:
+	if not expedition.tutorial:
+		return
+	var hint := UiKit.panel(UiKit.wrap_label(text, "", HORIZONTAL_ALIGNMENT_CENTER), "CardPanel")
+	column.add_child(hint)
+	column.move_child(hint, mini(1, column.get_child_count() - 1))
+
+
+func _toggle_auto() -> void:
+	_auto = not _auto
+	_auto_button.theme_type_variation = "GreenButton" if _auto else "GhostButton"
+	_schedule_auto()
+
+
+## In Auto mode, makes the next choice with the same rules as AutoPilot.
+func _schedule_auto() -> void:
+	if not _auto or expedition.is_finished():
+		return
+	if expedition.phase == Expedition.Phase.BATTLE:
+		return
+	var tween := create_tween()
+	tween.tween_interval(0.6)
+	tween.tween_callback(_auto_step)
+
+
+func _auto_step() -> void:
+	if not _auto or not is_inside_tree():
+		return
+	match expedition.phase:
+		Expedition.Phase.DOOR:
+			_choose_door(AutoPilot.best_door(expedition))
+		Expedition.Phase.DRAFT:
+			expedition.pick_relic(AutoPilot.best_pick(expedition))
+			_refresh()
+		Expedition.Phase.EVENT:
+			expedition.choose_event_option(AutoPilot.best_event_option(expedition))
+			_refresh()
 
 func _refresh_status() -> void:
 	var def := expedition.chapter_def
@@ -145,6 +192,8 @@ func _show_doors() -> void:
 		b.add_child(row)
 		column.add_child(b)
 	_body.add_child(column)
+	if expedition.room == 1:
+		_hint(column, tr("Battles play by themselves. Tap the door to start!"))
 
 
 func _choose_door(index: int) -> void:
@@ -158,7 +207,7 @@ func _start_battle() -> void:
 	var battle := expedition.fight()
 	_battle = BattleView.new()
 	_battle.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_battle.speed = float(Game.settings.get("battle_speed", 2))
+	_battle.speed = float(_effective_speed())
 	_battle.reduced_effects = bool(Game.settings.get("reduced_effects", false))
 	_battle.screen_shake = bool(Game.settings.get("screen_shake", true))
 	for res_id: String in expedition.db.resonances:
@@ -169,7 +218,9 @@ func _start_battle() -> void:
 	_battle.finished.connect(_refresh, CONNECT_ONE_SHOT)
 	var speed_button := UiKit.button(_speed_text(), Callable(), "GhostButton", 160)
 	speed_button.pressed.connect(func() -> void:
-		var next := 1 if int(Game.settings.get("battle_speed", 2)) >= 2 else 2
+		var speeds := Game.allowed_speeds()
+		var current := speeds.find(_effective_speed())
+		var next: int = speeds[(current + 1) % speeds.size()]
 		Game.set_setting("battle_speed", next)
 		if _battle != null:
 			_battle.speed = next
@@ -184,7 +235,12 @@ func _start_battle() -> void:
 
 
 func _speed_text() -> String:
-	return "%dx" % int(Game.settings.get("battle_speed", 2))
+	return "%dx" % _effective_speed()
+
+
+## The saved speed, capped to what the player may use (3x needs Swift Paws).
+func _effective_speed() -> int:
+	return mini(int(Game.settings.get("battle_speed", 2)), Game.allowed_speeds().max())
 
 
 # --- draft ----------------------------------------------------------------------------------
@@ -204,6 +260,7 @@ func _show_draft() -> void:
 		_refresh(), "GhostButton")
 	column.add_child(UiKit.hbox([reroll, skip], 12))
 	_body.add_child(column)
+	_hint(column, tr("Pick a relic. Two relics with matching tags awaken a Resonance and a new tail!"))
 
 
 func _relic_card(offer: Dictionary, index: int) -> Control:
@@ -302,6 +359,8 @@ func _show_results() -> void:
 		column.add_child(flow)
 	elif Game.profile.echo_relic != "":
 		column.add_child(UiKit.label(tr("Echo Keepsake: %s") % tr(expedition.db.relics[Game.profile.echo_relic]["name_key"]), "ValueLabel", HORIZONTAL_ALIGNMENT_CENTER))
+	if expedition.tutorial:
+		column.add_child(UiKit.panel(UiKit.wrap_label(tr("Spend gold in the Hero tab to grow stronger, then delve again!"), "", HORIZONTAL_ALIGNMENT_CENTER), "CardPanel"))
 	column.add_child(UiKit.spacer())
 	column.add_child(UiKit.button(tr("Back to camp"), func() -> void: closed.emit(), "GreenButton"))
 	_body.add_child(column)

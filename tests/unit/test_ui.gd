@@ -27,6 +27,20 @@ func _host(screen: Control) -> Control:
 func _cleanup(host: Node) -> void:
 	host.queue_free()
 	SaveService.new(dir).delete_all()
+	game.analytics.clear()
+
+
+## Every label and button text under a node, for finding hints.
+func _texts(node: Node) -> String:
+	var out := ""
+	if node is Label:
+		out += (node as Label).text + "\n"
+	elif node is Button:
+		out += (node as Button).text + "\n"
+	for c in node.get_children():
+		if not c.is_queued_for_deletion():
+			out += _texts(c)
+	return out
 
 
 func test_boot_creates_and_saves_a_profile() -> void:
@@ -154,3 +168,76 @@ func test_shop_screen_builds_with_progress() -> void:
 	var host := _host(ShopScreen.new())
 	assert_gt(host.get_child(0).get_child_count(), 0)
 	_cleanup(host)
+
+
+func test_speeds_and_auto_follow_swift_paws() -> void:
+	assert_eq(game.allowed_speeds(), [1, 2])
+	game.shop.grant(game.profile, "swift_paws", "t-swift", game.today())
+	assert_eq(game.allowed_speeds(), [1, 2, 3])
+	assert_true(game.auto_mode_allowed())
+	SaveService.new(dir).delete_all()
+
+
+func test_auto_mode_plays_an_expedition() -> void:
+	var exp: Expedition = game.start_expedition(1)
+	var screen := ExpeditionScreen.new()
+	screen.setup(exp)
+	var host := _host(screen)
+	screen._auto = true
+	var guard := 0
+	while not exp.is_finished() and guard < 80:
+		guard += 1
+		if screen._battle != null:
+			screen._battle.skip()
+			screen._refresh()
+		else:
+			screen._auto_step()
+	assert_true(exp.is_finished(), "auto mode reached the end")
+	_cleanup(host)
+
+
+func test_first_run_hints_only_on_first_expedition() -> void:
+	var camp := _host(CampScreen.new())
+	assert_true(_texts(camp).contains("Tap DELVE"), "camp hint for new players")
+	_cleanup(camp)
+	var exp: Expedition = game.start_expedition(1)
+	assert_true(exp.tutorial)
+	var screen := ExpeditionScreen.new()
+	screen.setup(exp)
+	var host := _host(screen)
+	assert_true(_texts(host).contains("Tap the door"), "door hint on the first run")
+	game.finish_expedition()
+	_cleanup(host)
+	var later := _host(CampScreen.new())
+	assert_false(_texts(later).contains("Tap DELVE"), "no camp hint after the first run")
+	_cleanup(later)
+
+
+func test_debug_tools_only_change_debug_builds() -> void:
+	if not OS.is_debug_build():
+		game.debug_add(Wallet.GOLD, 10000)
+		assert_eq(game.profile.wallet.gold, 0, "release builds ignore debug tools")
+		return
+	var gold: int = game.profile.wallet.gold
+	game.debug_add(Wallet.GOLD, 10000)
+	assert_eq(game.profile.wallet.gold, gold + 10000)
+	game.debug_unlock_chapter()
+	assert_eq(game.profile.best_chapter, 1)
+	game.debug_reset()
+	assert_eq(game.profile.best_chapter, 0, "reset starts a new profile")
+	assert_eq(game.profile.wallet.gold, 0)
+	var settings := _host(SettingsScreen.new())
+	assert_true(_texts(settings).contains("Test tools"), "debug panel visible in debug builds")
+	_cleanup(settings)
+
+
+func test_play_log_records_runs() -> void:
+	if not OS.is_debug_build():
+		return
+	game.start_expedition(1)
+	game.finish_expedition()
+	var s: Dictionary = game.analytics.summary()
+	assert_eq(s["sessions"], 1)
+	assert_eq(s["runs"], 1)
+	game.analytics.clear()
+	SaveService.new(dir).delete_all()

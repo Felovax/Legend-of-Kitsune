@@ -263,3 +263,33 @@ func test_random_free_player_never_softlocks() -> void:
 		AutoPilot.spend_greedily(prog, p)
 	assert_gte(p.best_chapter, 3, "cleared chapter %d after %d runs" % [p.best_chapter, runs])
 	assert_lt(runs, 120)
+
+
+func test_first_expedition_guarantees_a_resonance_pair() -> void:
+	var p := _profile()
+	var e := Expedition.start(db, p, 1)
+	assert_true(e.tutorial)
+	e.choose_door(0)
+	e.fight()
+	var first: Array = e.draft_offer.map(func(o: Dictionary) -> String: return o["relic"])
+	assert_eq(first, ["ember_stone", "frozen_core", "storm_crystal"])
+	e.pick_relic(0)
+	while e.phase != Expedition.Phase.DRAFT and not e.is_finished():
+		if e.phase == Expedition.Phase.DOOR:
+			e.choose_door(e.doors.find("fight") if e.doors.has("fight") else 0)
+		elif e.phase == Expedition.Phase.BATTLE:
+			e.fight()
+		elif e.phase == Expedition.Phase.EVENT:
+			e.choose_event_option(0)
+	if e.phase == Expedition.Phase.DRAFT:
+		var second: Dictionary = e.draft_offer[0]
+		assert_eq(second["relic"], "frozen_core")
+		assert_has(second["completes"], "thermal_shock")
+	var restored := Expedition.restore(db, e.to_snapshot())
+	assert_eq(JSON.stringify(restored.draft_offer), JSON.stringify(e.draft_offer), "tutorial survives restore")
+
+
+func test_later_expeditions_are_not_tutorials() -> void:
+	var p := _profile()
+	p.counters["runs"] = 1
+	assert_false(Expedition.start(db, p, 1).tutorial)

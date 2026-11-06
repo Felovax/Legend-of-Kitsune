@@ -62,6 +62,7 @@ func _initialize() -> void:
 
 func _simulate(db: ContentDB, a: Dictionary, days: int, seed_base: int) -> Dictionary:
 	var prog := Progression.new(db)
+	var shop := Shop.new(db)
 	var p := PlayerProfile.new()
 	p.seed_base = seed_base
 	var now := 1_800_000_000
@@ -88,7 +89,7 @@ func _simulate(db: ContentDB, a: Dictionary, days: int, seed_base: int) -> Dicti
 		if gem_carry >= 1.0:
 			p.wallet.add(Wallet.GEMS, int(gem_carry), "purchase", true)
 			gem_carry -= int(gem_carry)
-		_spend_gems(prog, p)
+		_spend_gems(shop, p, day)
 		AutoPilot.spend_greedily(prog, p)
 		var budget := int(a["minutes"]) * 60
 		while budget > 0:
@@ -105,7 +106,7 @@ func _simulate(db: ContentDB, a: Dictionary, days: int, seed_base: int) -> Dicti
 				failed_pushes = 0 if r.won else failed_pushes + 1
 			if p.echo_options.size() > 0:
 				prog.choose_echo(p, p.echo_options[0])
-			_spend_gems(prog, p)
+			_spend_gems(shop, p, day)
 			AutoPilot.spend_greedily(prog, p)
 			# Real time: battles at 2x speed, ~12 s of choices/animation per room,
 			# ~20 s for start and results screens.
@@ -119,16 +120,12 @@ func _simulate(db: ContentDB, a: Dictionary, days: int, seed_base: int) -> Dicti
 	return {"reach": reach, "by_day": by_day, "runs": runs, "gold_day30": gold_day30}
 
 
-## Gems go 60% to Gold Caches and 40% to Shard Caches (alternating by value).
-func _spend_gems(prog: Progression, p: PlayerProfile) -> void:
-	var toggle := 0
-	while p.wallet.balance(Wallet.GEMS) >= CACHE_GEMS:
-		p.wallet.spend(Wallet.GEMS, CACHE_GEMS, "cache")
-		if toggle % 5 < 3:
-			p.wallet.add(Wallet.GOLD, prog.gold_cache_amount(p), "gold_cache")
-		else:
-			p.wallet.add(Wallet.SHARDS, prog.shard_cache_amount(p), "shard_cache")
-		toggle += 1
+## Gems buy the real shop's caches (daily limit, rising price): gold first,
+## then shards. Unspent gems carry over.
+func _spend_gems(shop: Shop, p: PlayerProfile, day: int) -> void:
+	for offer_id in ["gold_cache", "shard_cache"]:
+		while shop.buy_offer(p, offer_id, day) == Shop.OK:
+			pass
 
 
 func _parse_args() -> Dictionary:

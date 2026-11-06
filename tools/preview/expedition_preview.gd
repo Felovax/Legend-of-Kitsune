@@ -1,6 +1,7 @@
 extends Control
 ## Screenshot helper: shows the Expedition screen in a chosen phase.
-## PREVIEW_PHASE = doors | battle | draft | event | results (default battle).
+## PREVIEW_PHASE = first | doors | battle | draft | event | results (default battle).
+## "first" is the very first door of a new player's first expedition.
 ## Uses separate save files under user://preview/.
 
 
@@ -15,6 +16,8 @@ func _ready() -> void:
 	add_child(bg)
 	var exp := Game.start_expedition(1)
 	match OS.get_environment("PREVIEW_PHASE"):
+		"first":
+			pass
 		"doors":
 			exp.choose_door(0)
 			exp.fight()

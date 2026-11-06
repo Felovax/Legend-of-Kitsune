@@ -56,6 +56,9 @@ var history: Array[Dictionary] = []
 ## Replaying them on a fresh Expedition with the same seed rebuilds this one.
 var actions: Array = []
 var _start_profile: Dictionary = {}
+## First expedition ever: the first two drafts guarantee a Resonance pair.
+var tutorial: bool = false
+var _drafts_made: int = 0
 
 var _result := RunResult.new()
 var _rng_doors: Rng32
@@ -75,7 +78,7 @@ static func start(content: ContentDB, profile: PlayerProfile, chapter_number: in
 ## Everything needed to rebuild this expedition later (after an app restart).
 func to_snapshot() -> Dictionary:
 	return {"chapter": chapter, "seed": run_seed, "run_id": run_id, "profile": _start_profile.duplicate(true),
-		"actions": actions.duplicate(true)}
+		"actions": actions.duplicate(true), "tutorial": tutorial}
 
 
 ## Rebuilds an expedition from a snapshot by replaying its actions.
@@ -84,6 +87,7 @@ static func restore(content: ContentDB, snapshot: Dictionary) -> Expedition:
 	if not snapshot.get("profile") is Dictionary or not snapshot.get("actions") is Array:
 		return null
 	var profile := PlayerProfile.from_dict(snapshot["profile"])
+	profile.counters["runs"] = 0 if snapshot.get("tutorial", false) else 1
 	var exp := Expedition.new(content, profile, int(snapshot.get("chapter", 1)), int(snapshot.get("seed", 0)),
 		str(snapshot.get("run_id", "")))
 	for a: Variant in snapshot["actions"]:
@@ -132,6 +136,7 @@ func _init(content: ContentDB, profile: PlayerProfile, chapter_number: int, seed
 		_start_profile.erase(transient)
 	rooms = int(run_cfg["rooms"])
 	first_clear = chapter > profile.best_chapter
+	tutorial = int(profile.counters.get("runs", 0)) == 0 and profile.best_chapter == 0
 	hero_id = profile.hero_id
 	base_stats = prog.hero_stats(profile)
 	hero_max_hp = int(base_stats["hp"])
@@ -356,8 +361,42 @@ func _encounter() -> PackedStringArray:
 
 
 func _open_draft() -> void:
-	draft_offer = _make_offer()
+	draft_offer = _tutorial_offer() if tutorial and _drafts_made < 2 else _make_offer()
+	_drafts_made += 1
 	phase = Phase.DRAFT
+
+
+## Onboarding: first draft offers three relics that each belong to a Resonance;
+## the second offers the partner of whichever was taken.
+func _tutorial_offer() -> Array[Dictionary]:
+	var pairs := {"ember_stone": "frozen_core", "frozen_core": "ember_stone", "storm_crystal": "chain_relic",
+		"chain_relic": "storm_crystal", "whetstone": "blood_chalice", "blood_chalice": "whetstone"}
+	var ids: PackedStringArray = []
+	if _drafts_made == 0:
+		ids = PackedStringArray(["ember_stone", "frozen_core", "storm_crystal"])
+	else:
+		for relic_id: String in relics:
+			if pairs.has(relic_id) and not relics.has(pairs[relic_id]):
+				ids.append(pairs[relic_id])
+				break
+		for extra in ["hourglass", "ward_stone", "whetstone"]:
+			if ids.size() < 3 and not ids.has(extra) and not relics.has(extra):
+				ids.append(extra)
+	var offer: Array[Dictionary] = []
+	var now := active_resonances()
+	for relic_id in ids:
+		if not db.relics.has(relic_id):
+			continue
+		var with_it := PackedStringArray(relics.keys())
+		if not with_it.has(relic_id):
+			with_it.append(relic_id)
+		var completes: PackedStringArray = []
+		for res_id in db.active_resonances(with_it):
+			if not now.has(res_id):
+				completes.append(res_id)
+		offer.append({"relic": relic_id, "level": int(relics.get(relic_id, 0)) + 1,
+			"upgrade": relics.has(relic_id), "completes": completes})
+	return offer if not offer.is_empty() else _make_offer()
 
 
 func _make_offer() -> Array[Dictionary]:

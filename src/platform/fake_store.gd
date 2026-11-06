@@ -33,5 +33,6 @@ func purchase(sku: String) -> void:
 		purchase_failed.emit(sku, "test_failure" if simulate_failure else "unknown_product")
 		return
 	_counter += 1
-	var transaction_id := "fake-%d-%d" % [int(Time.get_unix_time_from_system()), _counter]
+	# Random part keeps ids unique across app restarts (a counter alone repeats).
+	var transaction_id := "fake-%d-%s" % [int(Time.get_unix_time_from_system()), Crypto.new().generate_random_bytes(8).hex_encode()]
 	purchase_completed.emit(sku, transaction_id)

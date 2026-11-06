@@ -24,28 +24,28 @@ Rules: never add a currency to make prices confusing (FTC v. HoYoverse 2025; EU 
 | Gold per room | 3 × 1.36^(chapter−1) (elite ×2.5, boss ×12); replays pay 60%; first clear +3× boss gold |
 | Shards | 2 per room won (+10% per chapter), +15 for beating the boss |
 | Offline | 3% of active farming rate per minute, 12 h cap; never gems |
-| Gold Cache | 100 gems = 60 minutes of farming gold at your best chapter (scales with progress, no inflation) |
-| Shard Cache | 100 gems = 60 minutes of winning runs' shards at your best chapter |
+| Gold Cache (5 per day: 100, 150, 200, 300, 400 gems) | One cache = 60 minutes of farming gold at your best chapter (scales with progress, no inflation) |
+| Shard Cache (3 per day: 100, 150, 250 gems) | One cache = 60 minutes of winning runs' shards at your best chapter |
 
 Why these numbers: a cap of 4 levels per chapter gave free players a hard wall around chapter 21 that extra play could not move. A cap of 7 (1.06⁷ ≈ 1.50× per chapter, more than the enemies' 1.40×) ran away. With 6, levels stay cost-limited, and income versus cost per chapter gives a gentle, growing grind.
 
 ### Simulated pacing (Godot, real game code)
 
-`tools/economy_sim.gd -- --days=90 --seeds=2` (median of 2 seeds). Day on which the chapter was first cleared:
+`tools/economy_sim.gd -- --days=90 --seeds=2` (median of 2 seeds), with the real shop rules: gems buy Gold Caches (5 per day at 100, 150, 200, 300, 400 gems) and Shard Caches (3 per day). Day on which the chapter was first cleared:
 
 | Archetype (play/day, spend) | Ch 3 | Ch 5 | Ch 10 | Ch 15 | Ch 20 | Ch 25 | Ch 30 | Chapter on day 7 / 30 / 90 |
 |---|---|---|---|---|---|---|---|---|
-| Casual free (15 min, $0) | 1 | 1 | 3 | 5 | 10 | 17 | 30 | 18 / 30 / 38 |
-| Active free (50 min, $0) | 1 | 1 | 2 | 3 | 5 | 10 | 24 | 24 / 34 / 40 |
-| Occasional spender (20 min, $5 starter + $5/mo) | 1 | 1 | 2 | 4 | 8 | 13 | 23 | 19 / 32 / 40 |
-| Regular spender (45 min, $30/mo) | 1 | 1 | 1 | 2 | 4 | 6 | 12 | 27 / 37 / 45 |
-| High spender (75 min, $150/mo) | 1 | 1 | 1 | 2 | 3 | 4 | 6 | 32 / 43 / 50 |
+| Casual free (15 min, $0) | 1 | 1 | 3 | 6 | 11 | 18 | 31 | 16 / 30 / 39 |
+| Active free (50 min, $0) | 1 | 1 | 2 | 4 | 6 | 11 | 20 | 24 / 33 / 40 |
+| Occasional spender (20 min, $5 starter + $5/mo) | 1 | 1 | 2 | 5 | 7 | 13 | 24 | 21 / 33 / 40 |
+| Regular spender (45 min, $30/mo) | 1 | 1 | 2 | 4 | 5 | 8 | 14 | 25 / 36 / 44 |
+| High spender (75 min, $150/mo) | 1 | 1 | 2 | 3 | 4 | 6 | 8 | 29 / 42 / 50 |
 
 What this means:
-- **Onboarding is generous** (chapter 10 within 1–3 days).
-- **Free players finish the 30 launch chapters in about a month**, then keep progressing more slowly. That fits a content update every 4–6 weeks.
-- **Spending accelerates** progress: a regular spender is about 2× faster to chapter 30.
-- **Open issue:** the $150/month player is about 4× faster and 10 chapters ahead at day 90 (they also play 50% longer). Gold Caches are the lever; a daily cap or escalating price will be tested in M4.
+- **Onboarding is generous** (chapter 10 within 2–3 days for everyone).
+- **Free players finish the 30 launch chapters in 3–4 weeks**, then keep progressing more slowly. That fits a content update every 4–6 weeks.
+- **Spending accelerates without skipping:** a regular spender is about 1.4× faster to chapter 30 than an active free player, and a high spender about 2.5× (it was about 4× before the cache limits). By day 90 the high spender is 10 chapters ahead, partly because that bot also plays 50% longer.
+- The daily limit binds only for heavy spenders: $150/month buys roughly 3 caches a day.
 
 Read with care: these are bots with fixed habits, not people, and only 5 chapters have unique content today (simulations reuse chapter 5's enemies above that).
 
@@ -93,6 +93,8 @@ Assumptions: ~10% tax, 15% store fee (Apple Small Business Program; Google's new
 
 In the base case, $10K/month means roughly 25K new installs every month. At about $0.40 lifetime value per install, paid user acquisition only pays off if real metrics beat the base case. The plan is store-page optimization and organic growth first; paid UA only after lifetime value has been measured.
 
-## Metrics to instrument (event design in M4)
+## Metrics to instrument
+
+M4 ships a local play log (debug builds only, `src/services/analytics.gd`): `session_start`, `run_start`, `run_end`, `level_up`, `purchase`, `purchase_failed`, `offer`. A network sink with consent comes in M6. Full target list:
 
 Engagement (D1/D7/D30, sessions, chapter funnel, boss win rates, where players quit), economy (sources and sinks by reason, upgrade frequency, relic pick and win rates, Resonance discovery), revenue (conversion, ARPPU, revenue by product, repeat purchases, refunds).

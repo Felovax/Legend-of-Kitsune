@@ -265,3 +265,17 @@ func test_music_follows_setting_and_screen() -> void:
 	audio._streams.clear()
 	audio.current_music = ""
 	SaveService.new(dir).delete_all()
+
+
+func test_defeat_screen_has_no_purchase_prompt() -> void:
+	var exp: Expedition = game.start_expedition(1)
+	var screen := ExpeditionScreen.new()
+	screen.setup(exp)
+	var host := _host(screen)
+	exp.abandon()
+	screen._refresh()
+	assert_false(exp.result().won)
+	var text := _texts(host).to_lower()
+	for word in ["shop", "buy", "gems", "offer", "$"]:
+		assert_false(text.contains(word), "no '%s' after a defeat (docs/ECONOMY.md)" % word)
+	_cleanup(host)
